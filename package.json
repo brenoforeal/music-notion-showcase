@@ -1,0 +1,25 @@
+{
+  "name": "music-notion",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test \"scripts/*.test.mjs\"",
+    "lyrics": "node scripts/lyrics.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brenoforeal/music-notion-showcase.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/brenoforeal/music-notion-showcase/issues"
+  },
+  "homepage": "https://github.com/brenoforeal/music-notion-showcase#readme",
+  "devDependencies": {
+    "wrangler": "^4.151.0"
+  }
+}

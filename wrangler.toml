@@ -1,0 +1,28 @@
+# Cloudflare config for the main worker (deployed as "notion-proxy").
+# Secrets (PUBLISH_SECRET, YOUTUBE_API_KEY) are NOT here: they live in
+# Cloudflare and are set with `wrangler secret put NAME`.
+
+name = "notion-proxy"
+main = "worker/index.js"
+compatibility_date = "2026-09-12"
+
+# Keep any plain-text variables set in the dashboard instead of wiping them on deploy.
+keep_vars = true
+
+# No separate per-version URLs: only the main workers.dev address is public.
+preview_urls = false
+
+# Keep Workers Logs on (dashboard > Observability) so errors are visible.
+[observability.logs]
+enabled = true
+
+[[kv_namespaces]]
+binding = "RANKING_KV"
+id = "49879ee330b0451f882b1ac85c550785" # ranking-store
+
+[[kv_namespaces]]
+binding = "SONG_KV"
+id = "af3cf5fabacb4ffda3d4d4e2b2081880" # song-of-the-day-kv
+
+[triggers]
+crons = ["0 21 * * *"] # daily at 21:00 UTC = 18:00 Brazil time

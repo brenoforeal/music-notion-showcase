@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "calculator",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["-m", "http.server", "5500", "--bind", "127.0.0.1", "--directory", "calculator"],
+      "port": 5500
+    },
+    {
+      "name": "worker",
+      "runtimeExecutable": "npx.cmd",
+      "runtimeArgs": ["wrangler", "dev", "--port", "8787", "--ip", "127.0.0.1", "--test-scheduled"],
+      "port": 8787
+    }
+  ]
+}

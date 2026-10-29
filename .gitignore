@@ -1,0 +1,29 @@
+# Secrets - never commit
+.env
+.dev.vars
+.secret
+
+# Python
+__pycache__
+*.pyc
+venv
+.venv
+
+# Cloudflare  Node
+node_modules
+.wrangler
+build
+screenshots
+
+# OS  editor
+.DS_Store
+Thumbs.db
+.vscode
+# Album Page Creator log (personal)
+python/created-pages.csv
+# YouTube Music login (works like a password) and song matches (personal)
+python/browser.json
+python/playlist-matches.csv
+# Brainstorm mockups and Halloween prank files (image/sound go to KV, not git)
+.superpowers/
+halloween/

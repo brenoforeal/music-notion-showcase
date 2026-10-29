@@ -1,0 +1,3 @@
+ytmusicapi
+notion-client
+python-dotenv

@@ -1,0 +1,2627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Album Rating Calculator</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --card2:#1e222b; --line:#2a2f3a;
+    --txt:#e8ecf3; --muted:#8b95a7; --accent:#6ea8fe; --good:#4ade80; --bad:#ff6b6b;
+    --warn:#fbbf24;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:26px 18px 60px;background:var(--bg);color:var(--txt);
+    font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  .wrap{max-width:960px;margin:0 auto;display:grid;gap:18px}
+  header h1{font-size:21px;margin:0 0 4px;letter-spacing:-.01em}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 14px;font-weight:600}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .muted{color:var(--muted)}
+  .small{font-size:12px}
+  p{margin:0}
+
+  input[type=number],input[type=text],input[type=password],input[type=search]{
+    width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);
+    border-radius:9px;padding:9px 11px;font:inherit;outline:none;font-variant-numeric:tabular-nums;
+  }
+  input::placeholder{color:#5c6675}
+  input:focus{border-color:var(--accent)}
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield;appearance:textfield}
+
+  textarea{
+    width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);
+    border-radius:9px;padding:10px 12px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+    outline:none;resize:vertical;min-height:120px;
+  }
+  textarea:focus{border-color:var(--accent)}
+
+  button{
+    background:var(--card2);border:1px solid var(--line);color:var(--txt);
+    border-radius:9px;padding:9px 14px;font:inherit;cursor:pointer;white-space:nowrap;
+    transition:border-color .15s,background .15s,opacity .15s;
+  }
+  button:hover{border-color:var(--accent)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button.primary{background:var(--accent);color:#08111f;border-color:transparent;font-weight:650}
+  button.primary:hover{filter:brightness(1.08)}
+  button.danger:hover{border-color:var(--bad);color:var(--bad)}
+  button.ghost{background:transparent}
+  button.tiny{padding:5px 9px;font-size:12px}
+
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .row label{color:var(--muted);font-size:13px}
+
+  .song-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin:14px 0}
+  .song-row{display:grid;grid-template-columns:26px 1fr 28px;gap:8px;align-items:center}
+  .song-num{color:var(--muted);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+  .rm{background:transparent;border:none;color:#5c6675;font-size:19px;line-height:1;padding:0;border-radius:6px}
+  .rm:hover{color:var(--bad);border-color:transparent}
+
+  .avgbox{
+    display:flex;align-items:center;gap:14px;background:var(--card2);
+    border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:4px;flex-wrap:wrap;
+  }
+  .avgbox strong{font-size:21px;color:var(--accent);font-variant-numeric:tabular-nums}
+  .avgbox .muted{font-size:13px}
+
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:560px){.row2{grid-template-columns:1fr}}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin-top:14px}
+  .grid label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+  .lbl{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+  .lbl em{font-style:normal;color:var(--accent);font-size:11px;letter-spacing:.03em}
+
+  .resultbar{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    margin-top:16px;padding-top:16px;border-top:1px solid var(--line);flex-wrap:wrap;
+  }
+  .big{font-size:36px;font-weight:700;color:var(--good);line-height:1.1;font-variant-numeric:tabular-nums}
+
+  /* List rows: compact line, click to expand */
+  .empty{color:var(--muted);text-align:center;padding:20px}
+  .listsearch{margin-bottom:10px}
+  .listbar{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+  .listbar .listsearch{flex:1;margin:0}
+  .listbar .check{white-space:nowrap}
+  .cover-picker{margin:6px 0 12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+  .cover-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+  .cover-opt{display:flex;flex-direction:column;gap:3px;padding:6px;text-align:left;white-space:normal;font-size:11px;line-height:1.3}
+  .cover-opt img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;background:var(--card2)}
+  .cover-opt .t{font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .cover-opt.current{border-color:var(--good)}
+  .cover-picker .item-actions{border-top:none;padding-top:0}
+  .photo-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .photo-row .ph{width:40px;height:40px;border-radius:50%;object-fit:cover;background:var(--card2);flex:none}
+  .photo-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .photo-list{max-height:420px;overflow:auto;margin-top:8px}
+  .rows{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .item{border-bottom:1px solid #20242e}
+  .item:last-child{border-bottom:none}
+  .item.editing > .item-main{background:#1c2530}
+  .item-main{display:grid;grid-template-columns:30px 40px minmax(0,1fr) auto 56px 14px;gap:10px;align-items:center;padding:8px 12px;cursor:pointer}
+  .item-main:hover{background:#1b1f27}
+  .item-main:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .item-main.group{grid-template-columns:minmax(0,1fr) auto 56px 14px}
+  .item.open > .item-main{background:#1b1f27}
+  .item-main .rank{color:var(--muted);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+  .cover{width:40px;height:40px;border-radius:6px;object-fit:cover;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted)}
+  .item-name{display:flex;flex-direction:column;min-width:0}
+  .item-name strong,.item-name .small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .item-name .typetag{align-self:flex-start;margin:2px 0 0}
+  .item-main .cats{color:var(--muted);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .item-main .score{font-weight:700;color:var(--good);text-align:right;font-variant-numeric:tabular-nums}
+  .item-main .chev{color:var(--muted);font-size:11px}
+  .item-detail{padding:4px 12px 14px 92px;background:#151820}
+  .item-detail .sync-tracks{margin-bottom:6px}
+  .item-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .item-detail.songs{padding:2px 12px 8px 12px}
+  .song{display:grid;grid-template-columns:minmax(0,1fr) 44px auto 22px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #1c2029;font-size:13px}
+  .song:last-child{border-bottom:none}
+  .song.editing{background:#1c2530}
+  .song .r{text-align:right;font-weight:600;color:var(--good);font-variant-numeric:tabular-nums}
+  @media(max-width:640px){
+    .item-main{grid-template-columns:24px 36px minmax(0,1fr) 48px 12px;gap:8px;padding:8px 10px}
+    .item-main .cats{display:none}
+    .cover{width:36px;height:36px}
+    .item-detail{padding-left:12px}
+  }
+
+  .status{font-size:11px;color:var(--muted);margin-top:2px;min-height:14px}
+  .status.ok{color:var(--good)}
+  .status.err{color:var(--bad)}
+  .status.busy{color:var(--warn)}
+  .status:empty{display:none}
+
+  .tokenbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .tokenbar input{flex:1;min-width:200px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+
+  .banner{
+    background:#2a1f10;border:1px solid #4a3416;color:#f5c46a;
+    padding:10px 12px;border-radius:9px;font-size:13px;margin-bottom:14px;
+  }
+  .banner.err{background:#2a1313;border-color:#4a1818;color:#f0a0a0}
+  .banner.ok{background:#102a19;border-color:#1c4a2a;color:#7ee2a0}
+
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .footer{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+  a.link{color:var(--accent);text-decoration:none}
+  a.link:hover{text-decoration:underline}
+
+  .typerow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .typebtn{
+    background:var(--card2);border:1px solid var(--line);color:var(--muted);
+    border-radius:20px;padding:7px 14px;font:inherit;font-size:13px;cursor:pointer;
+  }
+  .typebtn:hover{border-color:var(--accent)}
+  .typebtn.active{background:var(--accent);color:#08111f;border-color:transparent;font-weight:650}
+
+  .typetag{
+    display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--muted);border:1px solid var(--line);border-radius:6px;
+    padding:1px 6px;margin-left:6px;font-weight:600;
+  }
+  .typetag.ep{color:#7ee2a0;border-color:#1c4a2a}
+  .typetag.comp{color:#f5c46a;border-color:#4a3416}
+
+
+  /* Sync from Notion */
+  .sync-preview{margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--card2)}
+  .sync-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .sync-head strong{font-size:16px}
+  .sync-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px}
+  .sync-scores div{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+  .sync-scores span{display:block;font-size:11px;color:var(--muted)}
+  .sync-scores b{font-variant-numeric:tabular-nums}
+  .sync-scores .final b{color:var(--good)}
+  .sync-tracks{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:3px 16px;font-size:13px;margin-bottom:10px}
+  .sync-tracks .t{display:flex;gap:6px;align-items:baseline}
+  .sync-tracks .t .r{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:600}
+  .sync-tracks .t.x{color:var(--muted);text-decoration:line-through}
+  .tier{font-size:10px;font-weight:700;border-radius:5px;padding:1px 5px}
+  .tier.atc{background:#3b3b3b;color:#d29a5f}
+  .tier.special{background:#f2d36b;color:#2a2205}
+  .sync-sub{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:10px 0 6px}
+  .sync-warn{color:var(--warn);font-size:12px;margin:2px 0}
+  .sync-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+
+  /* Import all from Notion */
+  .imp-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .imp-list{max-height:520px;overflow-y:auto;border:1px solid var(--line);border-radius:9px;background:var(--card)}
+  .imp-group{position:sticky;top:0;background:var(--card2);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;padding:6px 10px;border-bottom:1px solid var(--line);z-index:1}
+  .imp-row{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid #1c2029;font-size:13px}
+  .imp-row.off{opacity:.55}
+  .imp-row .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .imp-row .sub{color:var(--muted);font-size:11px;white-space:normal}
+  .imp-row .right{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .imp-row select{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit;font-size:12px}
+  .chip{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-radius:5px;padding:2px 6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+  .chip.new{color:#7ee2a0;border-color:#1c4a2a}
+  .chip.upd{color:var(--accent);border-color:#24406b}
+  .chip.unf{color:var(--warn);border-color:#4a3416}
+  .chip.err{color:var(--bad);border-color:#4a1818}
+  .imp-row .val{font-variant-numeric:tabular-nums;color:var(--good);font-weight:600}
+  /* Phones: full names, and the type / status / score go on their own line under the name. */
+  @media(max-width:640px){
+    .imp-row{grid-template-columns:22px minmax(0,1fr);align-items:start}
+    .imp-row .name{white-space:normal}
+    .imp-row .right{grid-column:2;justify-content:flex-start}
+  }
+
+  /* Layout: header, settings, collapsible lists with tabs */
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .pill{font-size:12px;border:1px solid var(--line);border-radius:20px;padding:2px 10px;color:var(--muted)}
+  .pill.ok{color:#7ee2a0;border-color:#1c4a2a}
+  .pill.warn{color:#f5c46a;border-color:#4a3416}
+  h3{font-size:13px;font-weight:600;margin:18px 0 8px;color:var(--txt)}
+  .settings h3:first-of-type{margin-top:0}
+  #calcCard h3{margin-top:16px}
+  details.sub{margin-top:8px}
+  details.sub summary{cursor:pointer}
+  .check{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:13px;cursor:pointer}
+  details.lists > summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:10px}
+  details.lists > summary::-webkit-details-marker{display:none}
+  details.lists > summary::before{content:'▸';color:var(--muted);font-size:12px}
+  details.lists[open] > summary::before{content:'▾'}
+  details.lists > summary h2{margin:0}
+  details.lists[open] > summary{margin-bottom:14px}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px;overflow-x:auto}
+  .tab{background:transparent;border:none;border-bottom:2px solid transparent;border-radius:0;color:var(--muted);padding:8px 12px;white-space:nowrap}
+  .tab:hover{color:var(--txt);border-color:transparent;border-bottom-color:var(--line)}
+  .tab.active{color:var(--txt);border-bottom-color:var(--accent)}
+  .tab span{color:var(--muted);font-size:12px}
+  .calc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .calc-head h2{margin:0}
+  .modes{display:inline-flex;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+  .modebtn{background:transparent;border:none;border-radius:7px;padding:6px 12px;color:var(--muted);font-size:13px}
+  .modebtn:hover{color:var(--txt)}
+  .modebtn.active{background:var(--accent);color:#08111f;font-weight:650}
+  .extras-form{grid-template-columns:1fr 1.4fr 140px auto;align-items:end}
+  @media(max-width:640px){.extras-form{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ── HEADER ─────────────────────────────────────────── -->
+  <header class="topbar">
+    <div>
+      <h1>Album Rating Calculator</h1>
+      <div class="pills">
+        <span id="notionPill" class="pill">Notion</span>
+        <span id="publishedPill" class="pill">Not published yet</span>
+      </div>
+    </div>
+    <button id="settingsToggle" class="ghost" aria-expanded="false" aria-controls="settingsPanel">⚙ Settings</button>
+  </header>
+
+  <!-- ── SETTINGS (hidden until ⚙) ─────────────────────── -->
+  <section id="settingsPanel" class="card settings" hidden>
+    <h2>Settings</h2>
+
+    <h3>Notion token</h3>
+    <div id="tokenBanner" class="banner">No token saved yet. Paste your Notion integration token below.</div>
+    <div class="tokenbar">
+      <input id="tokenInput" type="password" placeholder="ntn_..." autocomplete="off">
+      <button id="saveTokenBtn" class="primary">Save token</button>
+      <button id="forgetTokenBtn" class="ghost danger">Forget</button>
+    </div>
+    <p class="muted small" style="margin-top:8px">
+      Albums Ranking database: <code>6ca007e8bb6e834abade8153d7d58816</code> &nbsp;·&nbsp;
+      Stored in this browser only.
+    </p>
+
+    <h3>Publish passphrase</h3>
+    <div class="tokenbar">
+      <input id="secretInput" type="password" placeholder="Publish passphrase" autocomplete="off">
+      <button id="saveSecretBtn">Save</button>
+      <button id="forgetSecretBtn" class="ghost danger">Forget</button>
+    </div>
+    <div id="secretStatus" class="status" style="margin-top:6px"></div>
+
+    <h3>Ratings System page</h3>
+    <div class="tokenbar">
+      <input id="ratingsPageInput" type="text" placeholder="Notion link to your Ratings System page" autocomplete="off">
+      <button id="saveRatingsPageBtn">Save</button>
+    </div>
+    <div id="ratingsPageStatus" class="muted small" style="margin-top:6px">Linked from the ranking page ("How the ratings work"). Publish after changing it.</div>
+
+    <h3>Import all from Notion</h3>
+    <div class="row">
+      <button id="importOpenBtn">Import all from Notion…</button>
+      <span class="muted small">Lists every review page under Music; you choose what to import.</span>
+    </div>
+    <div id="importPanel" class="sync-preview" style="display:none"></div>
+
+    <h3>Backup</h3>
+    <div class="row">
+      <button id="fullBackupBtn">Download full backup</button>
+      <button id="importBtn">Restore backup…</button>
+      <input id="importFile" type="file" accept="application/json" hidden>
+      <span class="muted small">Albums, EPs and other songs in one file.</span>
+    </div>
+    <details class="sub">
+      <summary class="muted small">Export or import one list</summary>
+      <div class="row" style="margin-top:8px">
+        <button id="exportBtn" class="tiny">Export albums</button>
+        <button id="othersExportBtn" class="tiny">Export EPs</button>
+        <button id="othersImportBtn" class="tiny">Import EPs</button>
+        <input id="othersImportFile" type="file" accept="application/json" hidden>
+        <button id="extrasExportBtn" class="tiny">Export other songs</button>
+        <button id="extrasImportBtn" class="tiny">Import other songs</button>
+        <input id="extrasImportFile" type="file" accept="application/json" hidden>
+      </div>
+    </details>
+
+    <h3>Artist photos and pages</h3>
+    <div class="row">
+      <button id="findPhotosBtn">Find missing photos</button>
+      <span class="muted small">Shown on the ranking's artist rows (best album cover if none). "Page" links an artist's Notion page. Publish to update the page.</span>
+    </div>
+    <div id="photoStatus" class="status" style="margin-top:6px"></div>
+    <div id="photoList" class="photo-list"></div>
+
+    <h3>Danger zone</h3>
+    <div class="row">
+      <button id="clearBtn" class="danger">Clear albums</button>
+      <button id="othersClearBtn" class="danger">Clear EPs and compilations</button>
+      <button id="extrasClearBtn" class="danger">Clear other songs</button>
+    </div>
+
+    <h3>Scoring rules</h3>
+    <p class="muted small">
+      Albums: Production 15% · Individual 20% · Creativity 25% · Experience 40%, 0 to 10.
+      EPs and compilations: Experience 60% · Individual 40%.
+      Other songs contribute their Individual Rating only.
+      Scores are stored raw; the calculator rounds what it shows to the nearest 0.1, keeping exact .x5
+      (9.485 → 9.5, 9.33 → 9.3, 9.25 → 9.25).
+      Ties: Experience → Creativity → Individual → Production (EPs: Experience → Individual).
+    </p>
+  </section>
+
+  <!-- ── SYNC FROM NOTION ──────────────────────────────── -->
+  <section class="card">
+    <h2>Sync from Notion</h2>
+    <div class="tokenbar">
+      <input id="syncInput" type="text" placeholder="Paste a Notion album page link" autocomplete="off">
+      <button id="syncFetchBtn" class="primary">Fetch</button>
+    </div>
+    <div id="syncStatus" class="status" style="margin-top:6px"></div>
+    <div id="syncPreview" class="sync-preview" style="display:none"></div>
+  </section>
+
+  <!-- ── CALCULATOR (album) ────────────────────────────── -->
+  <section class="card" id="calcCard">
+    <div class="calc-head">
+      <h2>Calculator</h2>
+      <div class="modes" role="tablist" aria-label="What are you rating?">
+        <button type="button" class="modebtn active" role="tab" data-mode="album">Album</button>
+        <button type="button" class="modebtn" role="tab" data-mode="ep">EP / Compilation</button>
+        <button type="button" class="modebtn" role="tab" data-mode="song">Song</button>
+      </div>
+    </div>
+
+    <!-- Album mode -->
+    <div class="modepanel" data-mode-panel="album">
+    <div id="editBanner" class="banner ok" style="display:none">
+      Editing <strong id="editName"></strong> — saving will update this row.
+      <button id="cancelEditBtn" class="tiny" style="margin-left:10px">Cancel</button>
+    </div>
+    <div class="row2">
+      <input id="artistName" type="text" placeholder="Artist name">
+      <input id="albumTitle" type="text" placeholder="Album title">
+    </div>
+    <p class="muted small" style="margin-top:6px">Saved as <code id="namePreview">Artist Name - Album Name</code></p>
+
+    <h3>Song ratings</h3>
+    <div class="row">
+      <label for="songCount">Number of songs</label>
+      <input id="songCount" type="number" min="1" max="100" value="10" style="width:88px">
+      <button id="generateBtn">Generate</button>
+      <button id="addSongBtn">+ Add song</button>
+    </div>
+    <div id="songList" class="song-list"></div>
+    <div class="avgbox">
+      <span class="muted">Individual rating (song average)</span>
+      <strong id="songAvg">–</strong>
+      <button id="applyAvg" class="rm" style="margin-left:auto;font-size:13px;color:var(--accent)">Use</button>
+    </div>
+
+    <div class="grid">
+      <label><span class="lbl">Production <em>15%</em></span>
+        <input id="prod" type="number" min="0" max="10" step="any" placeholder="0–10"></label>
+      <label><span class="lbl">Individual Rating <em>20%</em></span>
+        <input id="ind" type="number" min="0" max="10" step="any" placeholder="0–10"></label>
+      <label><span class="lbl">Creativity <em>25%</em></span>
+        <input id="crea" type="number" min="0" max="10" step="any" placeholder="0–10"></label>
+      <label><span class="lbl">Experience <em>40%</em></span>
+        <input id="exp" type="number" min="0" max="10" step="any" placeholder="0–10"></label>
+    </div>
+    <div class="resultbar">
+      <div>
+        <div class="muted small">Final Score</div>
+        <div class="big" id="weighted">–</div>
+        <div class="muted small" id="rawNote"></div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="saveBtn">Save</button>
+        <button id="resetBtn" class="ghost">Clear form</button>
+      </div>
+    </div>
+    </div>
+
+    <!-- EP / Compilation mode -->
+    <div class="modepanel" data-mode-panel="ep" hidden>
+      <div id="othersForm">
+        <div id="othersEditBanner" class="banner ok" style="display:none">
+          Editing <strong id="othersEditName"></strong>
+          <button id="othersCancelEditBtn" class="tiny" style="margin-left:10px">Cancel</button>
+        </div>
+        <div class="row2">
+          <input id="othersArtist" type="text" placeholder="Artist name">
+          <input id="othersTitle" type="text" placeholder="Release title">
+        </div>
+        <div class="typerow">
+          <span class="muted small">Type:</span>
+          <button type="button" class="typebtn active" data-type="EP">EP</button>
+          <button type="button" class="typebtn" data-type="Compilation">Compilation</button>
+        </div>
+        <div class="grid">
+          <label><span class="lbl">Experience <em>60%</em></span>
+            <input id="othersExp" type="number" min="0" max="10" step="any" placeholder="0–10"></label>
+          <label><span class="lbl">Individual Rating <em>40%</em></span>
+            <input id="othersInd" type="number" min="0" max="10" step="any" placeholder="0–10"></label>
+        </div>
+        <div class="resultbar">
+          <div>
+            <div class="muted small">Final Score</div>
+            <div class="big" id="othersWeighted">–</div>
+            <div class="muted small" id="othersRawNote"></div>
+          </div>
+          <div class="actions">
+            <button class="primary" id="othersSaveBtn">Save</button>
+            <button id="othersResetBtn" class="ghost">Clear form</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Song mode (other songs: B-sides, singles, bonus tracks) -->
+    <div class="modepanel" data-mode-panel="song" hidden>
+      <div id="extrasForm">
+        <div id="extrasEditBanner" class="banner ok" style="display:none">
+          Editing <strong id="extrasEditName"></strong>
+          <button id="extrasCancelEditBtn" class="tiny" style="margin-left:10px">Cancel</button>
+        </div>
+        <div class="grid extras-form">
+          <label><span class="lbl">Artist</span>
+            <input id="extrasArtist" type="text" placeholder="Artist name"></label>
+          <label><span class="lbl">Song</span>
+            <input id="extrasTitle" type="text" placeholder="Song title"></label>
+          <label><span class="lbl">Rating</span>
+            <input id="extrasInd" type="number" min="0" max="10" step="any" placeholder="0–10"></label>
+          <button class="primary" id="extrasSaveBtn" style="align-self:end">Save</button>
+        </div>
+        <p class="muted small" style="margin-top:8px">For songs that aren't on a main album. Bonus tracks from Notion pages are added automatically by Sync.</p>
+      </div>
+
+      <div style="margin-top:14px">
+        <div class="row" style="justify-content:space-between">
+          <span class="muted small"><strong style="color:var(--txt)">Add several</strong> — one per line: <code>Artist | Song | Rating</code></span>
+          <button class="ghost tiny" id="extrasBatchToggle">Show</button>
+        </div>
+        <div id="extrasBatchWrap" style="display:none;margin-top:8px">
+          <textarea id="extrasBatchInput" placeholder="The Smiths | Jeane | 9.0
+The Smiths | Wonderful Woman | 8.5
+Oasis | Acquiesce | 9.5"></textarea>
+          <div class="row" style="margin-top:8px">
+            <button class="primary" id="extrasBatchAdd">Add all</button>
+            <span class="muted small" id="extrasBatchStatus"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PUBLISH ───────────────────────────────────────── -->
+  <section class="card">
+    <h2>Publish ranking</h2>
+    <div class="row">
+      <button id="publishBtn" class="primary">Publish ranking</button>
+      <label class="check"><input type="checkbox" id="stampOnPublish"> Update the "updated" time</label>
+      <a id="viewRankingLink" href="#" target="_blank" rel="noopener" class="link small" style="display:none;margin-left:auto">Open public page ↗</a>
+    </div>
+    <div id="publishStatus" class="status" style="margin-top:8px"></div>
+  </section>
+
+  <!-- ── RANKING AND LISTS (collapsed) ─────────────────── -->
+  <details id="listsBox" class="card lists">
+    <summary>
+      <h2>Ranking and lists</h2>
+      <span id="listsCount" class="muted small"></span>
+    </summary>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab active" role="tab" data-tab="albums">Albums <span id="tabCountAlbums"></span></button>
+      <button type="button" class="tab" role="tab" data-tab="eps">EPs and compilations <span id="tabCountEps"></span></button>
+      <button type="button" class="tab" role="tab" data-tab="songs">Other songs <span id="tabCountSongs"></span></button>
+    </div>
+
+    <!-- Albums -->
+    <div class="tabpanel" data-panel="albums">
+      <div class="listbar">
+        <input id="albumSearch" class="listsearch" type="search" placeholder="Search albums or artists" autocomplete="off">
+        <label class="check"><input type="checkbox" id="albumMissing"> Missing covers <span id="albumMissingCount"></span></label>
+      </div>
+      <div id="rankBody" class="rows"></div>
+    </div>
+
+    <!-- EPs and compilations -->
+    <div class="tabpanel" data-panel="eps" hidden>
+      <div class="listbar">
+        <input id="epSearch" class="listsearch" type="search" placeholder="Search EPs, compilations or artists" autocomplete="off">
+        <label class="check"><input type="checkbox" id="epMissing"> Missing covers <span id="epMissingCount"></span></label>
+      </div>
+      <div id="othersRankBody" class="rows"></div>
+    </div>
+
+    <!-- Other songs -->
+    <div class="tabpanel" data-panel="songs" hidden>
+      <p class="muted small" style="margin-bottom:10px">
+        Songs that aren't on a main album: B-sides, one-offs, bonus tracks, singles. They feed the
+        <strong>Others</strong> tab on the ranking page as a per-artist average.
+      </p>
+      <input id="songSearch" class="listsearch" type="search" placeholder="Search songs or artists" autocomplete="off">
+      <div class="muted small" style="margin-bottom:6px"><span id="extrasCount">0</span> songs, grouped by artist</div>
+      <div id="extrasListWrap" class="rows"></div>
+    </div>
+  </details>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const KEY = 'albumRanking.v2';
+  const OTHERS_KEY = 'albumRanking.others.v2';
+  const EXTRAS_KEY = 'albumRanking.extras.v2';
+  const TOKEN_KEY = 'notionToken.v1';
+  const SECRET_KEY = 'publishSecret.v1';
+  const DB_ID = '6ca007e8bb6e834abade8153d7d58816';
+  const PROXY_URL = 'https://notion-proxy.YOUR-SUBDOMAIN.workers.dev';
+  const NOTION_VERSION = '2022-06-28';
+
+  const $ = id => document.getElementById(id);
+
+  const songListEl = $('songList'), songAvgEl = $('songAvg');
+  const artistEl = $('artistName'), titleEl = $('albumTitle');
+  const namePreview = $('namePreview');
+  const prodEl = $('prod'), indEl = $('ind'), creaEl = $('crea'), expEl = $('exp');
+  const weightedEl = $('weighted'), rawNoteEl = $('rawNote');
+  const rankBody = $('rankBody');
+  const tokenInput = $('tokenInput'), tokenBanner = $('tokenBanner');
+  const secretInput = $('secretInput'), publishStatus = $('publishStatus'), viewLink = $('viewRankingLink');
+  const editBanner = $('editBanner'), editNameEl = $('editName');
+
+  // Others (EPs/Comps)
+  const othersArtistEl = $('othersArtist'), othersTitleEl = $('othersTitle');
+  const othersExpEl = $('othersExp'), othersIndEl = $('othersInd');
+  const othersWeightedEl = $('othersWeighted'), othersRawNoteEl = $('othersRawNote');
+  const othersRankBody = $('othersRankBody');
+  const othersEditBanner = $('othersEditBanner'), othersEditNameEl = $('othersEditName');
+
+  // Extras (loose songs)
+  const extrasArtistEl = $('extrasArtist'), extrasTitleEl = $('extrasTitle');
+  const extrasIndEl = $('extrasInd');
+  const extrasEditBanner = $('extrasEditBanner'), extrasEditNameEl = $('extrasEditName');
+  const extrasListWrap = $('extrasListWrap');
+  const extrasCountEl = $('extrasCount');
+
+  let songs = new Array(10).fill(null);
+  let indManual = false;
+  let albums = [];
+  let editingId = null;
+  let notionToken = '';
+
+  let others = [];
+  let othersEditingId = null;
+  let othersType = 'EP';
+
+  let extras = [];
+  let extrasEditingId = null;
+
+  /* ─────────── helpers ─────────── */
+
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+  function roundCents(v) {
+    if (!isFinite(v)) return 0;
+    v = clamp(v, 0, 10);
+    const c = Math.round(v * 100);
+    if (c % 10 === 5) return c;
+    return Math.round(v * 10) * 10;
+  }
+
+  function fmt(c) {
+    return (c % 10 === 0) ? (c / 100).toFixed(1) : (c / 100).toFixed(2);
+  }
+
+  function fmtFinal(a) {
+    if (a.rawScore != null) {
+      const v = Math.round(a.rawScore * 100) / 100;
+      return (v % 1 === 0) ? v.toFixed(1) : v.toFixed(2);
+    }
+    return fmt(a.score);
+  }
+
+  function fmtRawFloat(v) {
+    if (v == null || !isFinite(v)) return '–';
+    const r = Math.round(v * 100) / 100;
+    return (r % 1 === 0) ? r.toFixed(1) : r.toFixed(2);
+  }
+
+  function scoreForSort(a) {
+    if (a.rawScore != null) return a.rawScore;
+    return a.score / 100;
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, m => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]
+    ));
+  }
+
+  function readNum(el) {
+    const v = parseFloat(el.value);
+    return isNaN(v) ? null : clamp(v, 0, 10);
+  }
+
+  function updateNamePreview() {
+    const a = artistEl.value.trim();
+    const t = titleEl.value.trim();
+    let s = '';
+    if (a && t) s = a + ' - ' + t;
+    else if (t) s = t;
+    else if (a) s = a;
+    namePreview.textContent = s || 'Artist Name - Album Name';
+  }
+
+  /* ─────────── token ─────────── */
+
+  function loadToken() {
+    notionToken = localStorage.getItem(TOKEN_KEY) || '';
+    tokenInput.value = notionToken;
+    updateTokenBanner();
+  }
+
+  function updateTokenBanner() {
+    if (notionToken) {
+      tokenBanner.className = 'banner ok';
+      tokenBanner.textContent = '✓ Token saved — ready to send to Notion.';
+    } else {
+      tokenBanner.className = 'banner';
+      tokenBanner.textContent = 'No token saved yet. Paste your Notion integration token below.';
+    }
+    updatePills();
+  }
+
+  /* ─────────── header pills ─────────── */
+
+  const LAST_PUBLISH_KEY = 'calc.lastPublish'; // when this browser last published
+
+  function updatePills() {
+    const np = $('notionPill');
+    np.textContent = notionToken ? 'Notion connected' : 'No Notion token';
+    np.className = 'pill ' + (notionToken ? 'ok' : 'warn');
+    const last = localStorage.getItem(LAST_PUBLISH_KEY);
+    $('publishedPill').textContent = last
+      ? 'Published ' + new Date(last).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+      : 'Not published from this browser yet';
+  }
+
+  // ⚙ Settings: shown or hidden; the button says which.
+  $('settingsToggle').addEventListener('click', () => {
+    const panel = $('settingsPanel');
+    panel.hidden = !panel.hidden;
+    $('settingsToggle').setAttribute('aria-expanded', String(!panel.hidden));
+    if (!panel.hidden) renderPhotos();
+    if (!panel.hidden) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  $('saveTokenBtn').addEventListener('click', () => {
+    const v = tokenInput.value.trim();
+    if (!v) { alert('Paste a token first.'); return; }
+    if (!v.startsWith('ntn_') && !v.startsWith('secret_')) {
+      if (!confirm('That doesn\'t look like a Notion token (usually starts with ntn_ or secret_). Save anyway?')) return;
+    }
+    notionToken = v;
+    localStorage.setItem(TOKEN_KEY, v);
+    updateTokenBanner();
+  });
+
+  $('forgetTokenBtn').addEventListener('click', () => {
+    if (!confirm('Forget the saved token?')) return;
+    notionToken = '';
+    tokenInput.value = '';
+    localStorage.removeItem(TOKEN_KEY);
+    updateTokenBanner();
+  });
+
+  /* ─────────── publish secret ─────────── */
+
+  function loadSecret() {
+    secretInput.value = localStorage.getItem(SECRET_KEY) || '';
+    viewLink.href = PROXY_URL + '/ranking';
+    viewLink.style.display = 'inline-block';
+  }
+
+  $('saveSecretBtn').addEventListener('click', () => {
+    const v = secretInput.value.trim();
+    if (!v) { alert('Enter the publish passphrase first.'); return; }
+    localStorage.setItem(SECRET_KEY, v);
+    $('secretStatus').textContent = 'Passphrase saved.';
+    $('secretStatus').className = 'status ok';
+  });
+
+  $('forgetSecretBtn').addEventListener('click', () => {
+    if (!confirm('Forget the publish passphrase?')) return;
+    localStorage.removeItem(SECRET_KEY);
+    secretInput.value = '';
+    $('secretStatus').textContent = 'Passphrase cleared.';
+    $('secretStatus').className = 'status';
+  });
+
+  // The Ratings System page, linked from the public ranking. Saved in this browser, sent with Publish.
+  const RATINGS_PAGE_KEY = 'ratingsPage';
+  const DEFAULT_RATINGS_PAGE = 'https://app.notion.com/p/Ratings-System-876007e8bb6e826094a40113272361c2';
+  $('ratingsPageInput').value = localStorage.getItem(RATINGS_PAGE_KEY) || DEFAULT_RATINGS_PAGE;
+  $('saveRatingsPageBtn').addEventListener('click', () => {
+    const v = $('ratingsPageInput').value.trim();
+    if (v && !/^https?:\/\/\S+$/i.test(v)) { alert('Paste a full link, starting with https://'); return; }
+    if (v) localStorage.setItem(RATINGS_PAGE_KEY, v); else localStorage.removeItem(RATINGS_PAGE_KEY);
+    $('ratingsPageInput').value = v || DEFAULT_RATINGS_PAGE;
+    $('ratingsPageStatus').textContent = '✓ Saved. Publish to update the ranking page.';
+  });
+
+  $('publishBtn').addEventListener('click', async () => {
+    const secret = (localStorage.getItem(SECRET_KEY) || secretInput.value).trim();
+    if (!secret) { alert('Save the publish passphrase first (⚙ Settings).'); return; }
+    if (!albums.length && !others.length && !extras.length) { alert('Nothing to publish yet.'); return; }
+
+    // The public page's "updated" time: now if the box is ticked, otherwise keep the current one.
+    const stamp = $('stampOnPublish').checked;
+    const publishedAt = stamp ? new Date().toISOString() : (localStorage.getItem('rankingPublishedAt') || null);
+
+    publishStatus.textContent = 'Publishing…';
+    publishStatus.className = 'status busy';
+
+    try {
+      const res = await fetch(PROXY_URL + '/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, albums, others, extras, artistPhotos: publishedPhotos(), artistPages,
+          ratingsPage: localStorage.getItem(RATINGS_PAGE_KEY) || DEFAULT_RATINGS_PAGE, publishedAt })
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error('HTTP ' + res.status + (text ? ' — ' + text.slice(0, 80) : ''));
+      }
+      const respData = await res.json().catch(() => ({}));
+      if (respData && respData.publishedAt) {
+        localStorage.setItem('rankingPublishedAt', respData.publishedAt);
+      }
+      localStorage.setItem(LAST_PUBLISH_KEY, new Date().toISOString());
+      $('stampOnPublish').checked = false;
+      updatePills();
+      publishStatus.textContent = '✓ Published — ' + albums.length + ' albums, ' + others.length + ' EPs/Comps, ' + extras.length + ' other songs' +
+        (stamp ? ' · "updated" time set to now' : '');
+      publishStatus.className = 'status ok';
+    } catch (err) {
+      publishStatus.textContent = '✗ ' + (err.message || err);
+      publishStatus.className = 'status err';
+    }
+  });
+
+  /* ─────────── ranking and lists (collapsed, with tabs) ─────────── */
+  // Open/closed and the active tab are remembered in this browser (a convenience only).
+
+  const listsBox = $('listsBox');
+  const remember = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const recall = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+
+  function showTab(name) {
+    document.querySelectorAll('#listsBox .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('#listsBox .tabpanel').forEach(p => { p.hidden = p.dataset.panel !== name; });
+    remember('calc.tab', name);
+  }
+
+  /* ─────────── calculator modes: Album / EP / Song ─────────── */
+  // All three forms stay in the page; the switch only hides the other two,
+  // so a half-filled form survives switching back and forth.
+
+  function showMode(name) {
+    document.querySelectorAll('#calcCard .modebtn').forEach(b => b.classList.toggle('active', b.dataset.mode === name));
+    document.querySelectorAll('#calcCard .modepanel').forEach(p => { p.hidden = p.dataset.modePanel !== name; });
+    remember('calc.mode', name);
+  }
+
+  // Used by Edit: switch the calculator to the right mode and scroll to it.
+  function editInCalculator(mode) {
+    showMode(mode);
+    $('calcCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  document.querySelectorAll('#calcCard .modebtn').forEach(b => b.addEventListener('click', () => showMode(b.dataset.mode)));
+
+  function updateListCounts() {
+    $('tabCountAlbums').textContent = albums.length;
+    $('tabCountEps').textContent = others.length;
+    $('tabCountSongs').textContent = extras.length;
+    $('listsCount').textContent = albums.length + ' albums · ' + others.length + ' EPs and compilations · ' + extras.length + ' other songs';
+  }
+
+  document.querySelectorAll('#listsBox .tab').forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
+
+  // Search boxes: filter as you type (ranks stay the real ranking positions).
+  [['albumSearch', 'albums', () => renderRanking()],
+   ['epSearch', 'eps', () => renderOthersRanking()],
+   ['songSearch', 'songs', () => renderExtrasList()]].forEach(([id, key, render]) => {
+    $(id).addEventListener('input', e => { queries[key] = e.target.value; render(); });
+  });
+  $('albumMissing').addEventListener('change', e => { missingOnly.albums = e.target.checked; renderRanking(); });
+  $('epMissing').addEventListener('change', e => { missingOnly.eps = e.target.checked; renderOthersRanking(); });
+  listsBox.addEventListener('toggle', () => remember('calc.listsOpen', listsBox.open ? '1' : ''));
+
+  $('fullBackupBtn').addEventListener('click', () => {
+    downloadJson({ albums, others, extras, artistPhotos, artistPages, exportedAt: new Date().toISOString() },
+      'calculator-backup-' + new Date().toISOString().slice(0, 10) + '.json');
+  });
+
+  /* ─────────── songs ─────────── */
+
+  function renderSongs() {
+    songListEl.innerHTML = '';
+    songs.forEach((v, i) => {
+      const row = document.createElement('div');
+      row.className = 'song-row';
+
+      const num = document.createElement('span');
+      num.className = 'song-num';
+      num.textContent = i + 1;
+
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.min = 0; inp.max = 10; inp.step = 'any';
+      inp.dataset.idx = i;
+      inp.placeholder = '0–10';
+      inp.value = (v === null || v === '') ? '' : v;
+
+      const rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'rm';
+      rm.dataset.idx = i;
+      rm.title = 'Remove';
+      rm.textContent = '×';
+
+      row.append(num, inp, rm);
+      songListEl.appendChild(row);
+    });
+    updateSongAvg();
+  }
+
+  function updateSongAvg() {
+    const vals = songs.filter(v => v !== null && v !== '');
+    if (!vals.length) {
+      songAvgEl.textContent = '–';
+      if (!indManual) { indEl.value = ''; updateWeighted(); }
+      return;
+    }
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const c = roundCents(avg);
+    songAvgEl.textContent = fmt(c) + '   (' + vals.length + ' song' + (vals.length === 1 ? '' : 's') + ')';
+    if (!indManual) {
+      indEl.value = fmt(c);
+      updateWeighted();
+    }
+  }
+
+  songListEl.addEventListener('input', e => {
+    const inp = e.target;
+    if (inp.tagName !== 'INPUT') return;
+    const i = Number(inp.dataset.idx);
+    const v = parseFloat(inp.value);
+    songs[i] = isNaN(v) ? null : clamp(v, 0, 10);
+    updateSongAvg();
+  });
+
+  songListEl.addEventListener('click', e => {
+    const btn = e.target.closest('button.rm');
+    if (!btn) return;
+    songs.splice(Number(btn.dataset.idx), 1);
+    renderSongs();
+  });
+
+  $('generateBtn').addEventListener('click', () => {
+    let n = parseInt($('songCount').value, 10);
+    if (isNaN(n) || n < 1) n = 1;
+    if (n > 100) n = 100;
+    const next = [];
+    for (let i = 0; i < n; i++) next.push(i < songs.length ? songs[i] : null);
+    songs = next;
+    renderSongs();
+  });
+
+  $('addSongBtn').addEventListener('click', () => {
+    songs.push(null);
+    renderSongs();
+    const inputs = songListEl.querySelectorAll('input');
+    const last = inputs[inputs.length - 1];
+    if (last) last.focus();
+  });
+
+  $('applyAvg').addEventListener('click', () => {
+    indManual = false;
+    updateSongAvg();
+  });
+
+  /* ─────────── weighted ─────────── */
+
+  function updateWeighted() {
+    const p = readNum(prodEl), i = readNum(indEl),
+          c = readNum(creaEl), e = readNum(expEl);
+
+    if (p === null || i === null || c === null || e === null) {
+      weightedEl.textContent = '–';
+      rawNoteEl.textContent = '';
+      return null;
+    }
+
+    const raw = p * 0.15 + i * 0.20 + c * 0.25 + e * 0.40;
+    const cents = roundCents(raw);
+
+    weightedEl.textContent = fmt(cents);
+    rawNoteEl.textContent = 'raw ' + raw.toFixed(3);
+
+    return { p, i, c, e, cents, raw };
+  }
+
+  [prodEl, indEl, creaEl, expEl].forEach(el => el.addEventListener('input', updateWeighted));
+  indEl.addEventListener('input', () => { indManual = true; });
+
+  [artistEl, titleEl].forEach(el => el.addEventListener('input', updateNamePreview));
+
+  /* ─────────── storage ─────────── */
+
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify(albums)); } catch (e) {}
+  }
+  function persistOthers() {
+    try { localStorage.setItem(OTHERS_KEY, JSON.stringify(others)); } catch (e) {}
+  }
+  function persistExtras() {
+    try { localStorage.setItem(EXTRAS_KEY, JSON.stringify(extras)); } catch (e) {}
+  }
+
+  function load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY));
+      albums = Array.isArray(raw) ? raw : [];
+    } catch (e) { albums = []; }
+  }
+  function loadOthers() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(OTHERS_KEY));
+      others = Array.isArray(raw) ? raw : [];
+    } catch (e) { others = []; }
+  }
+  function loadExtras() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(EXTRAS_KEY));
+      extras = Array.isArray(raw) ? raw : [];
+    } catch (e) { extras = []; }
+  }
+
+  /* ─────────── album form ─────────── */
+
+  function clearForm() {
+    artistEl.value = '';
+    titleEl.value = '';
+    prodEl.value = '';
+    indEl.value = '';
+    creaEl.value = '';
+    expEl.value = '';
+    songs = new Array(songs.length || 10).fill(null);
+    indManual = false;
+    editingId = null;
+    editBanner.style.display = 'none';
+    renderSongs();
+    updateNamePreview();
+    updateWeighted();
+  }
+
+  function fillForm(album) {
+    artistEl.value = album.artist || '';
+    titleEl.value = album.title || '';
+    prodEl.value = album.production;
+    indEl.value = album.individual;
+    creaEl.value = album.creativity;
+    expEl.value = album.experience;
+    songs = (album.songs && album.songs.length) ? album.songs.slice() : new Array(10).fill(null);
+    indManual = true;
+    editingId = album.id;
+    editNameEl.textContent = album.name;
+    editBanner.style.display = '';
+    renderSongs();
+    updateNamePreview();
+    updateWeighted();
+    editInCalculator('album');
+  }
+
+  $('cancelEditBtn').addEventListener('click', clearForm);
+  $('resetBtn').addEventListener('click', clearForm);
+
+  $('saveBtn').addEventListener('click', () => {
+    const artist = artistEl.value.trim();
+    const title = titleEl.value.trim();
+    if (!artist || !title) { alert('Enter both artist and album title.'); return; }
+
+    const name = artist + ' - ' + title;
+    const data = updateWeighted();
+    if (!data) { alert('Fill in all four rating categories.'); return; }
+
+    const songList = songs.filter(v => v !== null && v !== '');
+
+    if (editingId) {
+      const idx = albums.findIndex(a => a.id === editingId);
+      if (idx >= 0) {
+        albums[idx] = {
+          ...albums[idx],
+          name, artist, title,
+          production: data.p,
+          individual: data.i,
+          creativity: data.c,
+          experience: data.e,
+          score: data.cents,
+          rawScore: data.raw,
+          songs: songList,
+          notionPageId: albums[idx].notionPageId || null,
+          editedAt: new Date().toISOString()
+        };
+      }
+    } else {
+      albums.push({
+        id: 'a' + Date.now() + Math.random().toString(36).slice(2, 7),
+        name, artist, title,
+        production: data.p,
+        individual: data.i,
+        creativity: data.c,
+        experience: data.e,
+        score: data.cents,
+        rawScore: data.raw,
+        songs: songList,
+        notionPageId: null,
+        notionStatus: null,
+        date: new Date().toISOString()
+      });
+    }
+
+    persist();
+    renderRanking();
+    clearForm();
+  });
+
+  /* ─────────── albums ranking ─────────── */
+
+  function compare(a, b) {
+    return (scoreForSort(b) - scoreForSort(a)) ||
+           (b.experience - a.experience) ||
+           (b.creativity - a.creativity) ||
+           (b.individual - a.individual) ||
+           (b.production - a.production) ||
+           String(a.name).localeCompare(String(b.name));
+  }
+
+  /* ─────────── list rows (shared by albums and EPs) ─────────── */
+  // A row is a compact line; clicking it expands the details (tracks, actions).
+  // Which rows are open is kept in memory only.
+
+  const expanded = new Set();
+  const queries = { albums: '', eps: '', songs: '' };
+  const missingOnly = { albums: false, eps: false }; // 'Missing covers' filter
+
+  // Search: every word must appear somewhere in the text (case and accents ignored).
+  const fold = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  function matches(query, ...texts) {
+    const hay = fold(texts.join(' '));
+    return fold(query).split(/\s+/).filter(Boolean).every(w => hay.includes(w));
+  }
+
+  // Cover from the Notion page icon; initials when there is none (or it fails to load).
+  function coverHtml(item) {
+    const initials = esc(String(item.artist || item.name || '?').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase());
+    const ph = '<span class="cover ph">' + initials + '</span>';
+    if (!item.cover) return ph;
+    return '<img class="cover" src="' + esc(item.cover) + '" alt="" loading="lazy" ' +
+      'onerror="this.outerHTML=this.dataset.ph" data-ph="' + esc(ph) + '">';
+  }
+
+  // Tracks from Notion (with 10* / 10** / (x)), else the hand-typed song ratings.
+  function tracksHtml(item) {
+    if (item.tracks && item.tracks.length) {
+      return '<div class="sync-tracks">' + item.tracks.map(t =>
+        '<div class="t' + (t.excluded ? ' x' : '') + '">' +
+          '<span class="muted">' + (t.n != null ? t.n + '.' : '') + '</span>' +
+          '<span>' + esc(t.title) + tierTag(t) + '</span>' +
+          '<span class="r">' + (t.rating == null ? '–' : fmtRaw(t.rating)) + '</span>' +
+        '</div>').join('') + '</div>';
+    }
+    if (item.songs && item.songs.length) {
+      return '<p class="muted small">Song ratings: ' + item.songs.map(fmtRaw).join(' · ') + '</p>';
+    }
+    return '<p class="muted small">No track ratings saved.</p>';
+  }
+
+  function bonusHtml(item) {
+    if (!item.bonus || !item.bonus.length) return '';
+    return '<div class="sync-sub">Bonus tracks (in Other songs)</div><div class="sync-tracks">' + item.bonus.map(b =>
+      '<div class="t' + (b.excluded ? ' x' : '') + '"><span>' + esc(b.title) + tierTag(b) + '</span>' +
+      '<span class="r">' + fmtRaw(b.rating) + '</span></div>').join('') + '</div>';
+  }
+
+  // One row. parts: { id, rank, title, artist, extra (tag html), cats, score, detail }
+  function rowHtml(item, p) {
+    const open = expanded.has(p.id);
+    return '<div class="item' + (open ? ' open' : '') + (p.editing ? ' editing' : '') + '">' +
+      '<div class="item-main" data-toggle="' + p.id + '" role="button" tabindex="0" aria-expanded="' + open + '">' +
+        '<span class="rank">' + p.rank + '</span>' +
+        coverHtml(item) +
+        '<span class="item-name"><strong>' + esc(p.title) + '</strong>' + p.extra +
+          '<span class="muted small">' + esc(p.artist) + '</span></span>' +
+        '<span class="cats">' + p.cats + '</span>' +
+        '<span class="score">' + p.score + '</span>' +
+        '<span class="chev">' + (open ? '▾' : '▸') + '</span>' +
+      '</div>' +
+      (open ? '<div class="item-detail">' + p.detail + '</div>' : '') +
+    '</div>';
+  }
+
+  function toggleRow(id, rerender) {
+    if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
+    rerender();
+  }
+
+  // Click or Enter/Space on a row's main line expands it.
+  function onRowKey(e, rerender) {
+    const t = e.target.closest('[data-toggle]');
+    if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleRow(t.dataset.toggle, rerender); }
+  }
+
+  function notionStatusHtml(a) {
+    if (a.notionStatus === 'sending') return '<span class="status busy">Sending to Albums Ranking…</span>';
+    if (a.notionStatus === 'ok') return '<span class="status ok">✓ Albums Ranking ' + esc(a.notionAction || 'sent') + '</span>';
+    if (a.notionStatus === 'err') return '<span class="status err">✗ ' + esc(a.notionError || 'error') + '</span>';
+    return '';
+  }
+
+  function syncedLine(item) {
+    return item.syncedAt ? '<span class="muted small">Synced from Notion ' + new Date(item.syncedAt).toLocaleDateString() + '</span>' : '';
+  }
+
+  /* ─────────── cover picker ─────────── */
+  // Opens inside an expanded album/EP row. Candidates come from the worker's /cover-options.
+  // A picked cover is pinned (Sync won't replace it) and, for Notion albums, becomes the page icon.
+  // Only one picker is open at a time.
+
+  let picker = null; // { id, state: 'loading' | 'ready' | 'error', options, error, status, statusCls }
+
+  const itemById = id => albums.find(a => a.id === id) || others.find(o => o.id === id);
+  const rerenderFor = id => albums.some(a => a.id === id) ? renderRanking() : renderOthersRanking();
+
+  function pickerStatus(id, text, cls) {
+    if (!picker || picker.id !== id) return;
+    picker.status = text;
+    picker.statusCls = cls || '';
+    rerenderFor(id);
+  }
+
+  async function openPicker(id) {
+    const item = itemById(id);
+    if (!item) return;
+    picker = { id, state: 'loading', options: [], status: '' };
+    rerenderFor(id);
+    const artist = item.artist || String(item.name || '').split(' - ')[0];
+    const album = item.title || String(item.name || '').split(' - ').slice(1).join(' - ');
+    try {
+      const res = await fetch(PROXY_URL + '/cover-options?artist=' + encodeURIComponent(artist) + '&album=' + encodeURIComponent(album));
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      if (picker && picker.id === id) Object.assign(picker, { state: 'ready', options: data.options || [] });
+    } catch (err) {
+      if (picker && picker.id === id) Object.assign(picker, { state: 'error', error: err.message || String(err) });
+    }
+    if (picker && picker.id === id) rerenderFor(id);
+  }
+
+  function pickerHtml(item) {
+    if (!picker || picker.id !== item.id) return '';
+    let opts;
+    if (picker.state === 'loading') opts = '<p class="status busy">Looking for covers…</p>';
+    else if (picker.state === 'error') opts = '<p class="status err">✗ Couldn\'t look for covers: ' + esc(picker.error) + '</p>';
+    else if (!picker.options.length) opts = '<p class="muted small">No covers found. Paste an image link below.</p>';
+    else opts = '<div class="cover-grid">' + picker.options.map(o =>
+      '<button type="button" class="cover-opt' + (o.url === item.cover ? ' current' : '') + '" data-pick="' + esc(o.url) + '">' +
+        '<img src="' + esc(o.url) + '" alt="" loading="lazy">' +
+        '<span class="t">' + esc(o.title) + '</span>' +
+        '<span class="muted">' + esc([o.detail, o.source].filter(Boolean).join(' · ')) + '</span>' +
+      '</button>').join('') + '</div>';
+    return '<div class="cover-picker" data-picker="' + item.id + '">' +
+      '<div class="sync-sub">Choose a cover' + (item.reviewPageId ? ' — also becomes the Notion page icon' : '') + '</div>' +
+      opts +
+      '<div class="tokenbar" style="margin-top:10px">' +
+        '<input type="text" class="cover-url" placeholder="Or paste an image link (https://…)" autocomplete="off">' +
+        '<button type="button" class="tiny" data-coveruse>Use link</button>' +
+      '</div>' +
+      '<div class="item-actions">' +
+        (item.cover ? '<button type="button" class="tiny" data-coverremove>Remove cover</button>' : '') +
+        '<button type="button" class="tiny ghost" data-coverclose>Close</button>' +
+        (picker.status ? '<span class="status ' + picker.statusCls + '">' + esc(picker.status) + '</span>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  async function setCover(id, url) {
+    const item = itemById(id);
+    if (!item) return;
+    item.cover = url || null;
+    item.coverPinned = !!url;
+    persist(); persistOthers();
+    if (!url) return pickerStatus(id, 'Cover removed.', 'ok');
+    if (!item.reviewPageId) return pickerStatus(id, '✓ Cover saved.', 'ok');
+    if (!notionToken) return pickerStatus(id, '✓ Cover saved. Add your Notion token (⚙ Settings) to also set the page icon.', 'busy');
+
+    pickerStatus(id, '✓ Cover saved · updating the Notion page icon…', 'busy');
+    try {
+      const res = await notionFetch('https://api.notion.com/v1/pages/' + item.reviewPageId, {
+        method: 'PATCH',
+        body: JSON.stringify({ icon: { type: 'external', external: { url } } })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || ('HTTP ' + res.status));
+      }
+      pickerStatus(id, '✓ Cover saved · Notion page icon updated.', 'ok');
+    } catch (err) {
+      pickerStatus(id, '✓ Cover saved · ✗ Notion icon not updated: ' + (err.message || err), 'err');
+    }
+  }
+
+  // Cover-picker clicks inside the album/EP lists. Returns true if the click was one of them.
+  function handleCoverClick(btn) {
+    if (btn.dataset.cover) { openPicker(btn.dataset.cover); return true; }
+    const box = btn.closest('[data-picker]');
+    if (!box) return false;
+    const id = box.dataset.picker;
+    if (btn.dataset.pick) setCover(id, btn.dataset.pick);
+    else if ('coveruse' in btn.dataset) {
+      const url = box.querySelector('.cover-url').value.trim();
+      if (!/^https?:\/\/\S+$/i.test(url)) pickerStatus(id, 'Paste a full image link, starting with https://', 'err');
+      else setCover(id, url);
+    } else if ('coverremove' in btn.dataset) {
+      if (confirm('Remove this cover from the calculator? The Notion page icon stays as it is.')) setCover(id, null);
+    } else if ('coverclose' in btn.dataset) {
+      picker = null;
+      rerenderFor(id);
+    }
+    return true;
+  }
+
+  function renderRanking() {
+    updateListCounts();
+    const sorted = albums.slice().sort(compare);
+
+    if (!sorted.length) {
+      rankBody.innerHTML = '<div class="empty">No albums yet — save one to start the ranking.</div>';
+      return;
+    }
+
+    $('albumMissingCount').textContent = '(' + albums.filter(a => !a.cover).length + ')';
+    const shown = sorted.map((a, i) => [a, i + 1])
+      .filter(([a]) => matches(queries.albums, a.name, a.artist, a.title) && (!missingOnly.albums || !a.cover));
+    rankBody.innerHTML = shown.length ? shown.map(([a, rank]) => rowHtml(a, {
+      id: a.id, rank, editing: a.id === editingId,
+      title: a.title || a.name, artist: a.artist || '', extra: '',
+      cats: 'Exp ' + fmt(roundCents(a.experience)) + ' · Cre ' + fmt(roundCents(a.creativity)) +
+            ' · Ind ' + (isFinite(a.individual) ? Number(a.individual).toFixed(2) : '–') + ' · Prod ' + fmt(roundCents(a.production)),
+      score: fmtFinal(a),
+      detail:
+        pickerHtml(a) + tracksHtml(a) + bonusHtml(a) +
+        '<div class="item-actions">' +
+          '<button class="tiny" data-edit="' + a.id + '">Edit</button>' +
+          '<button class="tiny" data-cover="' + a.id + '">Change cover</button>' +
+          (a.reviewUrl ? '<button class="tiny" data-sync="' + a.id + '">Re-sync</button>' +
+            '<a class="link small" href="' + esc(a.reviewUrl) + '" target="_blank" rel="noopener">Open in Notion ↗</a>' : '') +
+          '<button class="tiny" data-send="' + a.id + '" title="Write the scores to the Albums Ranking database">Send to Albums Ranking</button>' +
+          notionStatusHtml(a) + syncedLine(a) +
+          '<button class="tiny danger" data-del="' + a.id + '" style="margin-left:auto">Delete</button>' +
+        '</div>'
+    })).join('') : '<div class="empty">No albums match “' + esc(queries.albums) + '”.</div>';
+  }
+
+  rankBody.addEventListener('keydown', e => onRowKey(e, renderRanking));
+
+  rankBody.addEventListener('click', async e => {
+    const btn = e.target.closest('button');
+    if (!btn) {
+      const t = e.target.closest('[data-toggle]');
+      if (t) toggleRow(t.dataset.toggle, renderRanking);
+      return;
+    }
+    if (handleCoverClick(btn)) return;
+    const id = btn.dataset.edit || btn.dataset.send || btn.dataset.del || btn.dataset.sync;
+    if (!id) return;
+
+    if (btn.dataset.sync) {
+      const a = albums.find(x => x.id === id);
+      if (a) resync(a);
+    } else if (btn.dataset.edit) {
+      const a = albums.find(x => x.id === id);
+      if (a) fillForm(a);
+    } else if (btn.dataset.del) {
+      if (!confirm('Delete this album from the ranking?')) return;
+      albums = albums.filter(x => x.id !== id);
+      if (editingId === id) clearForm();
+      persist();
+      renderRanking();
+    } else if (btn.dataset.send) {
+      await sendToNotion(id);
+    }
+  });
+
+  /* ─────────── Others (EPs/Comps) ─────────── */
+
+  document.querySelectorAll('.typebtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      othersType = btn.dataset.type;
+      document.querySelectorAll('.typebtn').forEach(b => b.classList.toggle('active', b.dataset.type === othersType));
+    });
+  });
+
+  function updateOthersWeighted() {
+    const e = readNum(othersExpEl), i = readNum(othersIndEl);
+    if (e === null || i === null) {
+      othersWeightedEl.textContent = '–';
+      othersRawNoteEl.textContent = '';
+      return null;
+    }
+    const raw = e * 0.6 + i * 0.4;
+    othersWeightedEl.textContent = fmtRawFloat(raw);
+    othersRawNoteEl.textContent = 'raw ' + raw.toFixed(3);
+    return { e, i, raw };
+  }
+
+  [othersExpEl, othersIndEl].forEach(el => el.addEventListener('input', updateOthersWeighted));
+
+  function clearOthersForm() {
+    othersArtistEl.value = '';
+    othersTitleEl.value = '';
+    othersExpEl.value = '';
+    othersIndEl.value = '';
+    othersType = 'EP';
+    document.querySelectorAll('.typebtn').forEach(b => b.classList.toggle('active', b.dataset.type === 'EP'));
+    othersEditingId = null;
+    othersEditBanner.style.display = 'none';
+    updateOthersWeighted();
+  }
+
+  function fillOthersForm(o) {
+    othersArtistEl.value = o.artist || '';
+    othersTitleEl.value = o.title || '';
+    othersExpEl.value = o.experience;
+    othersIndEl.value = o.individual;
+    othersType = o.type || 'EP';
+    document.querySelectorAll('.typebtn').forEach(b => b.classList.toggle('active', b.dataset.type === othersType));
+    othersEditingId = o.id;
+    othersEditNameEl.textContent = o.artist + ' - ' + o.title;
+    othersEditBanner.style.display = '';
+    updateOthersWeighted();
+    editInCalculator('ep');
+  }
+
+  $('othersSaveBtn').addEventListener('click', () => {
+    const artist = othersArtistEl.value.trim();
+    const title = othersTitleEl.value.trim();
+    if (!artist || !title) { alert('Enter both artist and release title.'); return; }
+    const data = updateOthersWeighted();
+    if (!data) { alert('Fill in both Experience and Individual Rating.'); return; }
+
+    if (othersEditingId) {
+      const idx = others.findIndex(o => o.id === othersEditingId);
+      if (idx >= 0) {
+        others[idx] = {
+          ...others[idx],
+          artist, title,
+          type: othersType,
+          experience: data.e,
+          individual: data.i,
+          score: data.raw,
+          editedAt: new Date().toISOString()
+        };
+      }
+    } else {
+      others.push({
+        id: 'o' + Date.now() + Math.random().toString(36).slice(2, 7),
+        artist, title,
+        type: othersType,
+        experience: data.e,
+        individual: data.i,
+        score: data.raw,
+        date: new Date().toISOString()
+      });
+    }
+
+    persistOthers();
+    renderOthersRanking();
+    clearOthersForm();
+  });
+
+  $('othersResetBtn').addEventListener('click', clearOthersForm);
+  $('othersCancelEditBtn').addEventListener('click', clearOthersForm);
+
+  function compareOthers(a, b) {
+    return (b.score - a.score) ||
+           (b.experience - a.experience) ||
+           (b.individual - a.individual) ||
+           String(a.artist).localeCompare(String(b.artist)) ||
+           String(a.title).localeCompare(String(b.title));
+  }
+
+  function renderOthersRanking() {
+    updateListCounts();
+    const sorted = others.slice().sort(compareOthers);
+
+    if (!sorted.length) {
+      othersRankBody.innerHTML = '<div class="empty">No EPs or compilations yet.</div>';
+      return;
+    }
+
+    $('epMissingCount').textContent = '(' + others.filter(o => !o.cover).length + ')';
+    const shown = sorted.map((o, i) => [o, i + 1])
+      .filter(([o]) => matches(queries.eps, o.artist, o.title, o.type) && (!missingOnly.eps || !o.cover));
+    othersRankBody.innerHTML = shown.length ? shown.map(([o, rank]) => rowHtml(o, {
+      id: o.id, rank, editing: o.id === othersEditingId,
+      title: o.title, artist: o.artist,
+      extra: ' <span class="typetag ' + (o.type === 'EP' ? 'ep' : 'comp') + '">' + esc(o.type) + '</span>',
+      cats: 'Exp ' + fmtRawFloat(o.experience) + ' · Ind ' + fmtRawFloat(o.individual),
+      score: fmtRawFloat(o.score),
+      detail:
+        pickerHtml(o) + tracksHtml(o) + bonusHtml(o) +
+        '<div class="item-actions">' +
+          '<button class="tiny" data-oedit="' + o.id + '">Edit</button>' +
+          '<button class="tiny" data-cover="' + o.id + '">Change cover</button>' +
+          (o.reviewUrl ? '<button class="tiny" data-osync="' + o.id + '">Re-sync</button>' +
+            '<a class="link small" href="' + esc(o.reviewUrl) + '" target="_blank" rel="noopener">Open in Notion ↗</a>' : '') +
+          syncedLine(o) +
+          '<button class="tiny danger" data-odel="' + o.id + '" style="margin-left:auto">Delete</button>' +
+        '</div>'
+    })).join('') : '<div class="empty">Nothing matches “' + esc(queries.eps) + '”.</div>';
+  }
+
+  othersRankBody.addEventListener('keydown', e => onRowKey(e, renderOthersRanking));
+
+  othersRankBody.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) {
+      const t = e.target.closest('[data-toggle]');
+      if (t) toggleRow(t.dataset.toggle, renderOthersRanking);
+      return;
+    }
+    if (handleCoverClick(btn)) return;
+    if (btn.dataset.osync) {
+      const o = others.find(x => x.id === btn.dataset.osync);
+      if (o) resync(o);
+    } else if (btn.dataset.oedit) {
+      const o = others.find(x => x.id === btn.dataset.oedit);
+      if (o) fillOthersForm(o);
+    } else if (btn.dataset.odel) {
+      if (!confirm('Delete this release?')) return;
+      others = others.filter(x => x.id !== btn.dataset.odel);
+      if (othersEditingId === btn.dataset.odel) clearOthersForm();
+      persistOthers();
+      renderOthersRanking();
+    }
+  });
+
+  $('othersClearBtn').addEventListener('click', () => {
+    if (!others.length) return;
+    if (confirm('Delete all EPs and compilations?')) {
+      others = [];
+      clearOthersForm();
+      persistOthers();
+      renderOthersRanking();
+    }
+  });
+
+  $('othersExportBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(others, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'others-ranking.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  $('othersImportBtn').addEventListener('click', () => $('othersImportFile').click());
+
+  $('othersImportFile').addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!Array.isArray(data)) throw new Error('bad format');
+        others = data;
+        persistOthers();
+        renderOthersRanking();
+      } catch (err) {
+        alert('That file could not be read as an Others export.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  /* ─────────── Extras (loose songs) ─────────── */
+
+  function clearExtrasForm() {
+    extrasArtistEl.value = '';
+    extrasTitleEl.value = '';
+    extrasIndEl.value = '';
+    extrasEditingId = null;
+    extrasEditBanner.style.display = 'none';
+  }
+
+  function fillExtrasForm(x) {
+    extrasArtistEl.value = x.artist || '';
+    extrasTitleEl.value = x.title || '';
+    extrasIndEl.value = x.individual;
+    extrasEditingId = x.id;
+    extrasEditNameEl.textContent = x.artist + ' — ' + x.title;
+    extrasEditBanner.style.display = '';
+    editInCalculator('song');
+  }
+
+  function sortedExtras() {
+    return extras.slice().sort((a, b) => {
+      const r = String(a.artist).localeCompare(String(b.artist));
+      if (r) return r;
+      return String(a.title).localeCompare(String(b.title));
+    });
+  }
+
+  function renderExtrasList() {
+    updateListCounts();
+    const list = sortedExtras();
+    extrasCountEl.textContent = list.length;
+
+    if (!list.length) {
+      extrasListWrap.innerHTML = '<div class="empty">No other songs yet.</div>';
+      return;
+    }
+
+    // Group by artist (case-insensitive), artists A–Z; best-rated songs first in each group.
+    // The label prefers a capitalised spelling ("Oasis" over "oasis").
+    const groups = new Map();
+    for (const x of list) {
+      const key = 'artist:' + normKey(x.artist);
+      if (!groups.has(key)) groups.set(key, { artist: x.artist, songs: [] });
+      const g = groups.get(key);
+      if (g.artist === g.artist.toLowerCase() && x.artist !== x.artist.toLowerCase()) g.artist = x.artist;
+      g.songs.push(x);
+    }
+    for (const g of groups.values()) {
+      g.songs.sort((a, b) => (b.individual - a.individual) || String(a.title).localeCompare(String(b.title)));
+    }
+
+    const searching = !!queries.songs.trim();
+    let html = '';
+    for (const [key, g] of groups) {
+      const songs = searching ? g.songs.filter(x => matches(queries.songs, x.artist, x.title, x.fromRelease)) : g.songs;
+      if (!songs.length) continue;
+      const open = searching || expanded.has(key);
+      const counted = g.songs.filter(x => !x.excluded);
+      const avg = counted.length ? counted.reduce((s, x) => s + (x.individual || 0), 0) / counted.length : null;
+      html +=
+        '<div class="item' + (open ? ' open' : '') + '">' +
+          '<div class="item-main group" data-toggle="' + esc(key) + '" role="button" tabindex="0" aria-expanded="' + open + '">' +
+            '<span class="item-name"><strong>' + esc(g.artist) + '</strong></span>' +
+            '<span class="muted small">' + g.songs.length + ' song' + (g.songs.length === 1 ? '' : 's') + '</span>' +
+            '<span class="score" title="Average rating">' + fmtRawFloat(avg) + '</span>' +
+            '<span class="chev">' + (open ? '▾' : '▸') + '</span>' +
+          '</div>' +
+          (open ? '<div class="item-detail songs">' + songs.map(x =>
+            '<div class="song' + (x.id === extrasEditingId ? ' editing' : '') + '">' +
+              '<span class="song-title">' + esc(x.title) + tierTag(x) +
+                (x.fromRelease ? ' <span class="muted small">· ' + esc(x.fromRelease) + '</span>' : '') + '</span>' +
+              '<span class="r">' + fmtRawFloat(x.individual) + (x.excluded ? ' (x)' : '') + '</span>' +
+              '<button class="tiny' + (x.excluded ? ' primary' : '') + '" data-xx="' + x.id + '" title="(x) = not counted in the Individual average">(x)</button>' +
+              '<button class="tiny" data-xedit="' + x.id + '">Edit</button>' +
+              '<button class="rm" data-xdel="' + x.id + '" title="Delete" aria-label="Delete ' + esc(x.title) + '">×</button>' +
+            '</div>').join('') + '</div>' : '') +
+        '</div>';
+    }
+    extrasListWrap.innerHTML = html || '<div class="empty">No songs match “' + esc(queries.songs) + '”.</div>';
+  }
+
+  extrasListWrap.addEventListener('keydown', e => onRowKey(e, renderExtrasList));
+
+  extrasListWrap.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) {
+      const t = e.target.closest('[data-toggle]');
+      if (t) toggleRow(t.dataset.toggle, renderExtrasList);
+      return;
+    }
+    if (btn.dataset.xx) {
+      // (x) on/off: still listed and counted for 10s, left out of the Individual average.
+      const x = extras.find(v => v.id === btn.dataset.xx);
+      if (x) { x.excluded = !x.excluded; persistExtras(); renderExtrasList(); }
+    } else if (btn.dataset.xedit) {
+      const x = extras.find(v => v.id === btn.dataset.xedit);
+      if (x) fillExtrasForm(x);
+    } else if (btn.dataset.xdel) {
+      if (!confirm('Delete this song?')) return;
+      extras = extras.filter(v => v.id !== btn.dataset.xdel);
+      if (extrasEditingId === btn.dataset.xdel) clearExtrasForm();
+      persistExtras();
+      renderExtrasList();
+    }
+  });
+
+  $('extrasSaveBtn').addEventListener('click', () => {
+    const artist = extrasArtistEl.value.trim();
+    const title = extrasTitleEl.value.trim();
+    const ind = readNum(extrasIndEl);
+    if (!artist || !title) { alert('Enter both artist and song title.'); return; }
+    if (ind === null) { alert('Enter an Individual Rating (0–10).'); return; }
+
+    if (extrasEditingId) {
+      const idx = extras.findIndex(x => x.id === extrasEditingId);
+      if (idx >= 0) {
+        extras[idx] = {
+          ...extras[idx],
+          artist, title,
+          individual: ind,
+          editedAt: new Date().toISOString()
+        };
+      }
+    } else {
+      extras.push({
+        id: 'x' + Date.now() + Math.random().toString(36).slice(2, 7),
+        artist, title,
+        individual: ind,
+        date: new Date().toISOString()
+      });
+    }
+
+    persistExtras();
+    renderExtrasList();
+    clearExtrasForm();
+  });
+
+  $('extrasCancelEditBtn').addEventListener('click', clearExtrasForm);
+
+  $('extrasClearBtn').addEventListener('click', () => {
+    if (!extras.length) return;
+    if (confirm('Delete all others? This clears the list completely.')) {
+      extras = [];
+      clearExtrasForm();
+      persistExtras();
+      renderExtrasList();
+    }
+  });
+
+  $('extrasExportBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(extras, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'extras-ranking.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  $('extrasImportBtn').addEventListener('click', () => $('extrasImportFile').click());
+
+  $('extrasImportFile').addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!Array.isArray(data)) throw new Error('bad format');
+        extras = data;
+        persistExtras();
+        renderExtrasList();
+      } catch (err) {
+        alert('That file could not be read as an Extras export.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  // Batch toggle
+  $('extrasBatchToggle').addEventListener('click', () => {
+    const wrap = $('extrasBatchWrap');
+    const btn = $('extrasBatchToggle');
+    if (wrap.style.display === 'none'){
+      wrap.style.display = 'block';
+      btn.textContent = 'Hide';
+    } else {
+      wrap.style.display = 'none';
+      btn.textContent = 'Show';
+    }
+  });
+
+  // Batch add
+  $('extrasBatchAdd').addEventListener('click', () => {
+    const raw = $('extrasBatchInput').value;
+    const status = $('extrasBatchStatus');
+    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) { status.textContent = 'Nothing to add.'; return; }
+
+    let added = 0;
+    let skipped = 0;
+    for (const line of lines) {
+      const parts = line.split('|').map(s => s.trim());
+      if (parts.length < 3) { skipped++; continue; }
+      const artist = parts[0];
+      const title = parts[1];
+      const ind = parseFloat(parts[2]);
+      if (!artist || !title || isNaN(ind)) { skipped++; continue; }
+      const clamped = clamp(ind, 0, 10);
+      extras.push({
+        id: 'x' + Date.now() + Math.random().toString(36).slice(2, 7),
+        artist, title,
+        individual: clamped,
+        date: new Date().toISOString()
+      });
+      added++;
+    }
+
+    persistExtras();
+    renderExtrasList();
+    $('extrasBatchInput').value = '';
+    status.textContent = 'Added ' + added + (skipped ? ' — skipped ' + skipped : '');
+    setTimeout(() => { status.textContent = ''; }, 3000);
+  });
+
+  /* ─────────── Notion ─────────── */
+
+  async function notionFetch(url, opts) {
+    return fetch(PROXY_URL, {
+      method: opts && opts.method ? opts.method : 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Target-URL': url,
+        'Authorization': 'Bearer ' + notionToken,
+        'Notion-Version': NOTION_VERSION,
+        ...(opts && opts.headers ? opts.headers : {})
+      },
+      body: opts && opts.body ? opts.body : undefined
+    });
+  }
+
+  async function findExistingPage(name) {
+    const res = await notionFetch(
+      'https://api.notion.com/v1/databases/' + DB_ID + '/query',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          filter: { property: 'Name', title: { equals: name } },
+          page_size: 1
+        })
+      }
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error('Query failed: ' + (err.message || res.status));
+    }
+    const data = await res.json();
+    return data.results && data.results[0] ? data.results[0].id : null;
+  }
+
+  function buildProperties(album) {
+    const finalValue = (album.rawScore != null)
+      ? Math.round(album.rawScore * 100) / 100
+      : album.score / 100;
+
+    return {
+      'Name':              { title:     [{ text: { content: album.name } }] },
+      'Production':        { number:    album.production },
+      'Individual Rating': { number:    album.individual },
+      'Creativity':        { number:    album.creativity },
+      'Experience':        { number:    album.experience },
+      'Final Score':       { number:    finalValue }
+    };
+  }
+
+  async function sendToNotion(id) {
+    const album = albums.find(x => x.id === id);
+    if (!album) return;
+
+    if (!notionToken) {
+      alert('Save your Notion token first (top of the page).');
+      return;
+    }
+
+    album.notionStatus = 'sending';
+    album.notionError = null;
+    album.notionAction = null;
+    renderRanking();
+
+    try {
+      const existingId = await findExistingPage(album.name);
+      const props = buildProperties(album);
+
+      let res;
+      if (existingId) {
+        res = await notionFetch('https://api.notion.com/v1/pages/' + existingId, {
+          method: 'PATCH',
+          body: JSON.stringify({ properties: props })
+        });
+      } else {
+        res = await notionFetch('https://api.notion.com/v1/pages', {
+          method: 'POST',
+          body: JSON.stringify({
+            parent: { database_id: DB_ID },
+            properties: props
+          })
+        });
+      }
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || ('HTTP ' + res.status));
+      }
+
+      const data = await res.json();
+      album.notionPageId = data.id;
+      album.notionStatus = 'ok';
+      album.notionAction = existingId ? 'updated' : 'created';
+      album.notionError = null;
+
+    } catch (err) {
+      album.notionStatus = 'err';
+      album.notionError = (err.message || String(err)).slice(0, 90);
+    }
+
+    persist();
+    renderRanking();
+  }
+
+  /* ─────────── Sync from Notion ─────────── */
+  // Fetch only fills syncData (the preview); nothing is saved until Apply.
+  // reviewPageId = the review page. Not notionPageId, which is the Albums Ranking row.
+
+  const syncInput = $('syncInput'), syncStatus = $('syncStatus'), syncPreview = $('syncPreview');
+  let syncData = null;
+  let syncType = null; // 'EP' or 'Compilation', asked for EP-style pages
+  let syncFixOn = true;  // fix wrong score lines on the Notion page (preview checkbox)
+
+  const normKey = s => String(s || '').toLowerCase().replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim();
+
+  // Raw value, shown with up to 4 decimals (stored unrounded).
+  function fmtRaw(v) {
+    return (v == null || !isFinite(v)) ? '–' : String(Math.round(v * 10000) / 10000);
+  }
+
+  function setSyncStatus(text, cls) {
+    syncStatus.textContent = text;
+    syncStatus.className = 'status' + (cls ? ' ' + cls : '');
+  }
+
+  async function fetchNotionAlbum(link) {
+    const res = await fetch(PROXY_URL + '/notion-album?page=' + encodeURIComponent(link), {
+      headers: { 'Authorization': 'Bearer ' + notionToken }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.error || ('HTTP ' + res.status)), { status: res.status });
+    return data;
+  }
+
+  // The album / EP this page would update, if any.
+  function findAlbumMatch(d) {
+    return albums.find(a => a.reviewPageId === d.pageId) ||
+           albums.find(a => normKey(a.name) === normKey(d.name)) || null;
+  }
+  function findOtherMatch(d) {
+    return others.find(o => o.reviewPageId === d.pageId) ||
+           others.find(o => normKey(o.artist) === normKey(d.artist) && normKey(o.title) === normKey(d.album)) || null;
+  }
+
+  // Bonus tracks that count, and what they'd do to the Others list.
+  function bonusPlan(d) {
+    const list = d.bonus.filter(b => !b.excluded);
+    const updates = list.filter(b => extras.some(x =>
+      x.reviewPageId === d.pageId && normKey(x.title) === normKey(b.title) ||
+      normKey(x.artist) === normKey(d.artist) && normKey(x.title) === normKey(b.title)));
+    return { list, updates: updates.length, added: list.length - updates.length };
+  }
+
+  function tierTag(t) {
+    if (t.tier === 'special') return ' <span class="tier special">10**</span>';
+    if (t.tier === 'atc') return ' <span class="tier atc">10*</span>';
+    return '';
+  }
+
+  async function startSync(link) {
+    if (!notionToken) { alert('Save your Notion token first (top of the page).'); return; }
+    if (!link.trim()) { setSyncStatus('Paste a Notion page link first.', 'err'); return; }
+    syncInput.value = link;
+    syncPreview.style.display = 'none';
+    setSyncStatus('Reading the page from Notion…', 'busy');
+    try {
+      syncData = await fetchNotionAlbum(link.trim());
+      const prev = syncData.kindGuess === 'ep' ? findOtherMatch(syncData) : null;
+      syncType = prev ? prev.type : null;
+      syncFixOn = true;
+      setSyncStatus('');
+      renderSyncPreview();
+    } catch (err) {
+      syncData = null;
+      setSyncStatus('✗ ' + (err.message || err), 'err');
+    }
+  }
+
+  function renderSyncPreview() {
+    const d = syncData;
+    if (!d) { syncPreview.style.display = 'none'; return; }
+    const isEp = d.kindGuess === 'ep';
+    const final = isEp ? d.final.ep : d.final.album;
+    const match = isEp ? findOtherMatch(d) : findAlbumMatch(d);
+    const s = d.scores;
+
+    const score = (label, v, cls) => '<div class="' + (cls || '') + '"><span>' + label + '</span><b>' + fmtRaw(v) + '</b></div>';
+    const scores = isEp
+      ? score('Experience', s.experience) + score('Individual', s.individual) + score('Final', final, 'final')
+      : score('Production', s.production) + score('Individual', s.individual) + score('Creativity', s.creativity) +
+        score('Experience', s.experience) + score('Final', final, 'final');
+
+    const tracks = d.tracks.map(t =>
+      '<div class="t' + (t.excluded ? ' x' : '') + '">' +
+        '<span class="muted">' + (t.n != null ? t.n + '.' : '') + '</span>' +
+        '<span>' + esc(t.title) + tierTag(t) + '</span>' +
+        '<span class="r">' + (t.rating == null ? '–' : fmtRaw(t.rating)) + (t.excluded ? ' (x)' : '') + '</span>' +
+      '</div>').join('');
+
+    const bonus = d.bonus.map(b =>
+      '<div class="t' + (b.excluded ? ' x' : '') + '"><span>' + esc(b.title) + tierTag(b) + '</span>' +
+      '<span class="r">' + fmtRaw(b.rating) + '</span></div>').join('');
+
+    let matchLine;
+    if (match) {
+      const old = isEp ? match.score : (match.rawScore != null ? match.rawScore : match.score / 100);
+      matchLine = 'Updates <strong>' + esc(match.name || (match.artist + ' - ' + match.title)) + '</strong> (' + fmtRaw(old) + ' → ' + fmtRaw(final) + ')';
+    } else {
+      matchLine = 'New ' + (isEp ? 'EP / compilation' : 'album');
+    }
+    const bp = bonusPlan(d);
+    if (bp.list.length) matchLine += ' · bonus tracks → Others: ' + bp.updates + ' updated, ' + bp.added + ' new';
+
+    const typeRow = isEp
+      ? '<span class="muted small">Type:</span>' +
+        ['EP', 'Compilation'].map(t => '<button type="button" class="typebtn' + (syncType === t ? ' active' : '') + '" data-synctype="' + t + '">' + t + '</button>').join('')
+      : '';
+
+    const canApply = d.status === 'complete' && final != null;
+    syncPreview.innerHTML =
+      '<div class="sync-head">' +
+        '<strong>' + esc(d.name) + '</strong>' +
+        '<span class="typetag ' + (isEp ? 'ep' : '') + '">' + (isEp ? 'EP-style page' : 'Album') + '</span>' +
+        '<a class="link small" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open in Notion ↗</a>' +
+      '</div>' +
+      '<div class="sync-scores">' + scores + '</div>' +
+      '<div class="sync-sub">Tracks (' + d.tracks.length + ')</div><div class="sync-tracks">' + tracks + '</div>' +
+      (d.bonus.length ? '<div class="sync-sub">Bonus tracks</div><div class="sync-tracks">' + bonus + '</div>' : '') +
+      d.warnings.map(w => '<p class="sync-warn">⚠ ' + esc(w) + '</p>').join('') +
+      fixesHtml(scoreFixes(d)) +
+      (canApply ? '' : '<p class="sync-warn">This page isn\'t finished yet (unrated tracks or missing scores), so it can\'t be applied.</p>') +
+      '<div class="sync-actions">' + typeRow +
+        '<span class="muted small" style="flex:1;min-width:180px">' + matchLine + '</span>' +
+        '<button id="syncApplyBtn" class="primary"' + (canApply ? '' : ' disabled') + '>Apply</button>' +
+        '<button id="syncCancelBtn" class="ghost">Cancel</button>' +
+      '</div>';
+    syncPreview.style.display = '';
+  }
+
+  function applyBonus(d) {
+    const keep = bonusPlan(d).list;
+    const now = new Date().toISOString();
+    // Drop this page's bonus tracks that are no longer on it.
+    extras = extras.filter(x => x.reviewPageId !== d.pageId || keep.some(b => normKey(b.title) === normKey(x.title)));
+    for (const b of keep) {
+      const x = extras.find(e => (e.reviewPageId === d.pageId || normKey(e.artist) === normKey(d.artist)) && normKey(e.title) === normKey(b.title));
+      // block / note: the song's own line on the page (the ranking links straight to it) and whether it has a note.
+      const fields = { artist: d.artist, title: b.title, individual: b.rating, tier: b.tier, reviewPageId: d.pageId, fromRelease: d.album,
+        block: b.block || null, note: !!b.note };
+      if (x) Object.assign(x, fields, { editedAt: now });
+      else extras.push({ id: 'x' + Date.now() + Math.random().toString(36).slice(2, 7), ...fields, date: now });
+    }
+  }
+
+  // Writes one parsed page into albums / others (+ bonus tracks into extras).
+  // Doesn't save or re-render: callers do that once at the end.
+  // type: 'EP' or 'Compilation' for EP-style pages; ignored for albums.
+  function applyRelease(d, type) {
+    const isEp = d.kindGuess === 'ep';
+    const now = new Date().toISOString();
+    const counted = d.tracks.filter(t => !t.excluded && t.rating != null);
+    const fromNotion = {
+      tracks: d.tracks, bonus: d.bonus,
+      reviewPageId: d.pageId, reviewUrl: d.url,
+      syncedAt: now, notionEdited: d.lastEdited
+    };
+    // A cover picked by hand (pinned) always wins; a page without an icon keeps the current cover.
+    const coverFor = existing => (existing && existing.coverPinned) ? existing.cover : (d.cover || (existing && existing.cover) || null);
+
+    if (isEp) {
+      const o = findOtherMatch(d);
+      const fields = {
+        artist: d.artist, title: d.album, type,
+        experience: d.scores.experience, individual: d.scores.individual, score: d.final.ep,
+        ...fromNotion, cover: coverFor(o)
+      };
+      if (o) Object.assign(o, fields, { editedAt: now });
+      else others.push({ id: 'o' + Date.now() + Math.random().toString(36).slice(2, 7), ...fields, date: now });
+    } else {
+      const a = findAlbumMatch(d);
+      const fields = {
+        name: d.name, artist: d.artist, title: d.album,
+        production: d.scores.production, individual: d.scores.individual,
+        creativity: d.scores.creativity, experience: d.scores.experience,
+        rawScore: d.final.album, score: roundCents(d.final.album),
+        songs: counted.map(t => t.rating),
+        ...fromNotion, cover: coverFor(a)
+      };
+      if (a) Object.assign(a, fields, { editedAt: now });
+      else albums.push({ id: 'a' + Date.now() + Math.random().toString(36).slice(2, 7), ...fields, notionPageId: null, notionStatus: null, date: now });
+    }
+
+    applyBonus(d);
+  }
+
+  function saveAll() {
+    persist(); persistOthers(); persistExtras();
+    renderRanking(); renderOthersRanking(); renderExtrasList();
+  }
+
+  /* ─────────── fixing score lines on the Notion page ─────────── */
+  // When the page's "Individual Ratings" / "Final Score" differ from what the tracks give,
+  // the line is rewritten with the calculated value (2 decimals). The calculator itself
+  // keeps using the raw value. Lines holding several scores at once are left alone.
+
+  const round2 = v => Math.round(v * 100) / 100;
+  const FIX_KEYS = [['individual', 'Individual Ratings'], ['final', 'Final Score']];
+
+  // [{ key, name, from, to, line }] for this page; line.shared = can't be rewritten automatically.
+  function scoreFixes(d) {
+    const want = { individual: d.scores.individual, final: d.kindGuess === 'ep' ? d.final.ep : d.final.album };
+    const out = [];
+    for (const [key, name] of FIX_KEYS) {
+      const line = (d.scoreLines || {})[key];
+      const written = d.written[key];
+      if (!line || typeof written !== 'number' || want[key] == null) continue;
+      const to = round2(want[key]);
+      if (Math.abs(written - to) > 1e-9) out.push({ key, name, from: written, to, line });
+    }
+    return out;
+  }
+
+  // The re-rate history kept before the new value ("9.04→ "). If the new value equals the
+  // number right before the last arrow ("9.47→ 9.5" fixed to 9.47), that repeat is dropped:
+  // "9.47→ " -> "", "8 → 9.47→ " -> "8 → ".
+  function fixPrefix(prefix, to) {
+    const p = String(prefix || '');
+    const chain = p.replace(/\s*(→|->)\s*$/, '');
+    const last = chain.match(/(\d+(?:[.,]\d+)?)\s*$/);
+    if (chain !== p && last && Math.abs(parseFloat(last[1].replace(',', '.')) - to) < 1e-9) {
+      return chain.slice(0, last.index);
+    }
+    return p;
+  }
+
+  // Rewrites the lines; returns the number fixed and the errors. Waits and retries on 429.
+  async function applyScoreFixes(fixes) {
+    let fixed = 0;
+    const errors = [];
+    for (const f of fixes.filter(f => f.line.id)) {
+      const body = { [f.line.type]: { rich_text: [
+        { type: 'text', text: { content: f.line.label + ': ' }, annotations: { bold: true, color: f.line.labelColor || 'default' } },
+        // Only the last number changes: "Final Score: 9.04→ 9.71/10" keeps its "9.04→ " history.
+        { type: 'text', text: { content: fixPrefix(f.line.prefix, f.to) + String(f.to) + (f.line.suffix || '') }, annotations: { bold: true } },
+      ] } };
+      for (let attempt = 1; ; attempt++) {
+        const res = await notionFetch('https://api.notion.com/v1/blocks/' + f.line.id, { method: 'PATCH', body: JSON.stringify(body) });
+        if (res.status === 429 && attempt <= 4) { await sleep(2000 * attempt); continue; }
+        if (res.ok) fixed++;
+        else {
+          const err = await res.json().catch(() => ({}));
+          errors.push(f.name + ': ' + (err.message || 'HTTP ' + res.status));
+        }
+        break;
+      }
+    }
+    return { fixed, errors };
+  }
+
+  function fixesHtml(fixes) {
+    if (!fixes.length) return '';
+    const auto = fixes.filter(f => !f.line.shared);
+    const manual = fixes.filter(f => f.line.shared);
+    return '<div class="sync-sub">Fix on the Notion page</div>' +
+      (auto.length ? '<label class="check"><input type="checkbox" id="syncFixBox"' + (syncFixOn ? ' checked' : '') + '> ' +
+        auto.map(f => esc(f.name) + ' ' + fmtRaw(f.from) + ' → ' + fmtRaw(f.to)).join(' · ') + '</label>' : '') +
+      manual.map(f => '<p class="muted small">' + esc(f.name) + ' ' + fmtRaw(f.from) + ' → ' + fmtRaw(f.to) +
+        ': it shares a line with other scores, so fix it by hand.</p>').join('');
+  }
+
+  async function applySync() {
+    const d = syncData;
+    if (!d) return;
+    if (d.kindGuess === 'ep' && !syncType) { alert('Choose EP or Compilation first.'); return; }
+    const fixes = syncFixOn ? scoreFixes(d).filter(f => !f.line.shared) : [];
+    applyRelease(d, syncType);
+    saveAll();
+    syncData = null;
+    syncInput.value = '';
+    syncPreview.style.display = 'none';
+    if (!fixes.length) { setSyncStatus('✓ ' + d.name + ' synced.', 'ok'); return; }
+    setSyncStatus('✓ ' + d.name + ' synced · fixing ' + fixes.length + ' line(s) on the Notion page…', 'busy');
+    const { fixed, errors } = await applyScoreFixes(fixes);
+    setSyncStatus('✓ ' + d.name + ' synced · ' + fixed + ' Notion line(s) fixed' + (errors.length ? ' · ✗ ' + errors.join('; ') : '') + '.',
+      errors.length ? 'err' : 'ok');
+  }
+
+  $('syncFetchBtn').addEventListener('click', () => startSync(syncInput.value));
+  syncInput.addEventListener('keydown', e => { if (e.key === 'Enter') startSync(syncInput.value); });
+
+  syncPreview.addEventListener('change', e => {
+    if (e.target.id === 'syncFixBox') syncFixOn = e.target.checked;
+  });
+
+  syncPreview.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.synctype) { syncType = btn.dataset.synctype; renderSyncPreview(); }
+    else if (btn.id === 'syncApplyBtn') applySync();
+    else if (btn.id === 'syncCancelBtn') { syncData = null; syncPreview.style.display = 'none'; setSyncStatus(''); }
+  });
+
+  // Re-sync a row that came from Notion: fetch it again and show the preview.
+  function resync(item) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    startSync(item.reviewUrl);
+  }
+
+  /* ─────────── Import all from Notion ─────────── */
+  // 1. List the review pages under Music.  2. Scan (read + parse) each one.
+  // 3. You tick what to import.  4. Backup download, then apply the ticked ones.
+
+  const importPanel = $('importPanel');
+  let importRows = [];   // { page, data, error, state: waiting|loading|done|error|imported, checked, type }
+  let importStatus = '';
+  let scanning = false;
+  let showUnfinished = false; // blank templates are hidden unless asked for
+  let importFix = true;       // also fix wrong score lines on the imported pages
+
+  async function fetchNotionList() {
+    const res = await fetch(PROXY_URL + '/notion-albums', { headers: { 'Authorization': 'Bearer ' + notionToken } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    return data.pages;
+  }
+
+  // What importing a row would do. ready = can be ticked.
+  function rowPlan(r) {
+    if (r.state === 'error') return { chip: 'err', label: 'Error' };
+    if (r.state === 'waiting' || r.state === 'loading') return { chip: '', label: r.state === 'loading' ? 'Reading…' : 'Waiting' };
+    const d = r.data;
+    if (d.status !== 'complete') return { chip: 'unf', label: 'Not finished' };
+    const isEp = d.kindGuess === 'ep';
+    const final = isEp ? d.final.ep : d.final.album;
+    const m = isEp ? findOtherMatch(d) : findAlbumMatch(d);
+    if (r.state === 'imported') return { chip: '', label: 'Imported', final };
+    if (!m) return { chip: 'new', label: 'New', final, ready: true, isEp };
+    const old = isEp ? m.score : (m.rawScore != null ? m.rawScore : m.score / 100);
+    if (old != null && Math.abs(old - final) < 1e-9) return { chip: '', label: 'No change', final, ready: true, isEp, match: m };
+    return { chip: 'upd', label: 'Update ' + fmtRaw(old) + ' →', final, ready: true, isEp, match: m };
+  }
+
+  function renderImport() {
+    const plans = importRows.map(rowPlan);
+    const done = importRows.filter(r => r.state !== 'waiting' && r.state !== 'loading').length;
+    const ticked = importRows.filter((r, i) => r.checked && plans[i].ready).length;
+    const count = label => plans.filter(p => p.label.startsWith(label)).length;
+
+    const listEl = importPanel.querySelector('.imp-list');
+    const scroll = listEl ? listEl.scrollTop : 0;
+
+    let rows = '', group = null;
+    importRows.forEach((r, i) => {
+      const p = plans[i];
+      if (p.chip === 'unf' && !showUnfinished) return;
+      const g = r.page.path[0] || 'Directly under Music';
+      if (g !== group) { group = g; rows += '<div class="imp-group">' + esc(g) + '</div>'; }
+      const nFix = p.ready && importFix ? scoreFixes(r.data).filter(f => !f.line.shared).length : 0;
+      const sub = [r.page.path.slice(1).join(' / ')].concat(nFix ? ['fixes ' + nFix + ' Notion line' + (nFix > 1 ? 's' : '')] : [])
+        .concat(r.error ? [r.error] : [], r.data ? r.data.warnings.map(w => '⚠ ' + w) : [])
+        .filter(Boolean).map(esc).join(' · ');
+      const typeSel = p.ready && p.isEp
+        ? '<select data-imptype="' + i + '"><option value="">EP or Compilation?</option>' +
+          ['EP', 'Compilation'].map(t => '<option' + (r.type === t ? ' selected' : '') + '>' + t + '</option>').join('') + '</select>'
+        : '';
+      rows +=
+        '<div class="imp-row' + (p.ready ? '' : ' off') + '">' +
+          '<input type="checkbox" data-imp="' + i + '"' + (r.checked && p.ready ? ' checked' : '') + (p.ready ? '' : ' disabled') + '>' +
+          '<div><div class="name">' + esc(r.page.name) + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>' +
+          '<div class="right">' + typeSel +
+            (p.label ? '<span class="chip ' + p.chip + '">' + esc(p.label) + '</span>' : '') +
+            (p.final != null ? '<span class="val">' + fmtRaw(p.final) + '</span>' : '') +
+          '</div>' +
+        '</div>';
+    });
+
+    // Albums already in the calculator that no page matched: renamed, or not in Notion.
+    let unmatched = '';
+    if (!scanning && done === importRows.length && importRows.length) {
+      const matched = new Set(plans.filter(p => p.match).map(p => p.match.id));
+      const pageIds = new Set(importRows.map(r => r.page.pageId));
+      const left = albums.filter(a => !matched.has(a.id) && !pageIds.has(a.reviewPageId));
+      if (left.length) {
+        unmatched = '<p class="muted small" style="margin-top:10px">Albums in the calculator that no page matched (' + left.length +
+          '): ' + left.map(a => esc(a.name)).join(', ') + '. If one of these is the same album under another name, rename it here first so it gets updated instead of added twice.</p>';
+      }
+    }
+
+    importPanel.innerHTML =
+      '<div class="imp-bar">' +
+        '<strong>' + (scanning ? 'Reading pages… ' + done + ' / ' + importRows.length : importRows.length + ' pages') + '</strong>' +
+        '<span class="muted small">' + count('New') + ' new · ' + count('Update') + ' to update · ' + count('No change') + ' unchanged · ' + count('Not finished') + ' not finished' +
+          (count('Error') ? ' · ' + count('Error') + ' errors' : '') + '</span>' +
+        '<label class="muted small" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="impShowUnf"' + (showUnfinished ? ' checked' : '') + '> Show not finished</label>' +
+        '<span style="flex:1"></span>' +
+        (!scanning && count('Error') ? '<button class="tiny" id="impRetry">Retry errors</button>' : '') +
+        '<label class="muted small" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="impFix"' + (importFix ? ' checked' : '') + '> Fix wrong scores on the pages</label>' +
+        '<button class="tiny" id="impAll">Tick all ready</button>' +
+        '<button class="tiny" id="impNone">Untick all</button>' +
+        '<button class="primary" id="impGo"' + (scanning || !ticked ? ' disabled' : '') + '>Import ' + ticked + '</button>' +
+        '<button class="ghost tiny" id="impClose">Close</button>' +
+      '</div>' +
+      (importStatus ? '<div class="status ok" style="margin-bottom:8px">' + esc(importStatus) + '</div>' : '') +
+      '<div class="imp-list">' + rows + '</div>' + unmatched;
+    importPanel.querySelector('.imp-list').scrollTop = scroll;
+    importPanel.style.display = '';
+  }
+
+  const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+  // Notion allows ~3 requests a second. On 429 ("slow down") wait longer each try: 2s, 4s, 6s, 8s.
+  async function fetchWithBackoff(pageId) {
+    for (let attempt = 1; ; attempt++) {
+      try { return await fetchNotionAlbum(pageId); }
+      catch (err) {
+        if (err.status !== 429 || attempt > 4) throw err;
+        await sleep(2000 * attempt);
+      }
+    }
+  }
+
+  async function scanPage(r) {
+    r.state = 'loading';
+    r.error = null;
+    renderImport();
+    try {
+      r.data = await fetchWithBackoff(r.page.pageId);
+      r.state = 'done';
+      const p = rowPlan(r);
+      r.checked = !!p.ready;
+      if (p.isEp && p.match) r.type = p.match.type;
+    } catch (err) {
+      r.state = 'error';
+      r.error = err.message || String(err);
+    }
+    renderImport();
+  }
+
+  async function openImport() {
+    if (!notionToken) { alert('Save your Notion token first (top of the page).'); return; }
+    if (scanning) return;
+    importStatus = '';
+    importPanel.style.display = '';
+    importPanel.innerHTML = '<span class="status busy">Finding review pages under Music…</span>';
+    let pages;
+    try { pages = await fetchNotionList(); }
+    catch (err) { importPanel.innerHTML = '<span class="status err">✗ ' + esc(err.message || err) + '</span>'; return; }
+
+    importRows = pages.map(page => ({ page, data: null, error: null, state: 'waiting', checked: false, type: null }));
+    await scanRows(importRows);
+  }
+
+  // Two pages at a time: fast enough, and gentle on Notion's rate limit.
+  async function scanRows(rows) {
+    scanning = true;
+    rows.forEach(r => { r.state = 'waiting'; });
+    renderImport();
+    const queue = rows.slice();
+    const worker = async () => { while (queue.length) await scanPage(queue.shift()); };
+    await Promise.all([worker(), worker()]);
+    scanning = false;
+    renderImport();
+  }
+
+  function downloadJson(data, filename) {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  async function runImport() {
+    const chosen = importRows.filter(r => r.checked && rowPlan(r).ready);
+    const noType = chosen.filter(r => r.data.kindGuess === 'ep' && !r.type);
+    if (noType.length) {
+      alert('Choose EP or Compilation for: ' + noType.map(r => r.page.name).join(', '));
+      return;
+    }
+    if (!confirm('Import ' + chosen.length + ' page(s)? A backup of your current data downloads first.')) return;
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadJson({ albums, others, extras, exportedAt: new Date().toISOString() }, 'calculator-backup-' + stamp + '.json');
+
+    let added = 0, updated = 0;
+    const fixes = importFix ? chosen.flatMap(r => scoreFixes(r.data).filter(f => !f.line.shared)) : [];
+    for (const r of chosen) {
+      if (rowPlan(r).match) updated++; else added++;
+      applyRelease(r.data, r.type);
+      r.state = 'imported';
+      r.checked = false;
+    }
+    saveAll();
+    importStatus = '✓ Imported ' + chosen.length + ' (' + added + ' new, ' + updated + ' updated). Backup saved as calculator-backup-' + stamp + '.json.';
+    if (fixes.length) {
+      importStatus += ' Fixing ' + fixes.length + ' score line(s) on the Notion pages…';
+      renderImport();
+      const { fixed, errors } = await applyScoreFixes(fixes);
+      importStatus = importStatus.replace(/ Fixing .*$/, ' ' + fixed + ' Notion score line(s) fixed' + (errors.length ? ', ' + errors.length + ' failed (' + errors.slice(0, 3).join('; ') + ')' : '') + '.');
+    }
+    renderImport();
+  }
+
+  $('importOpenBtn').addEventListener('click', openImport);
+
+  importPanel.addEventListener('change', e => {
+    const el = e.target;
+    if (el.id === 'impShowUnf') showUnfinished = el.checked;
+    else if (el.id === 'impFix') importFix = el.checked;
+    else if (el.dataset.imp != null) importRows[+el.dataset.imp].checked = el.checked;
+    else if (el.dataset.imptype != null) importRows[+el.dataset.imptype].type = el.value || null;
+    renderImport();
+  });
+
+  importPanel.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.id === 'impRetry') return scanRows(importRows.filter(r => r.state === 'error'));
+    if (btn.id === 'impAll') importRows.forEach(r => { r.checked = !!rowPlan(r).ready; });
+    else if (btn.id === 'impNone') importRows.forEach(r => { r.checked = false; });
+    else if (btn.id === 'impGo') return runImport();
+    else if (btn.id === 'impClose') { if (!scanning) { importPanel.style.display = 'none'; importRows = []; } return; }
+    renderImport();
+  });
+
+  /* ─────────── album import/export/clear ─────────── */
+
+  $('clearBtn').addEventListener('click', () => {
+    if (!albums.length) return;
+    if (confirm('Delete all saved albums from the ranking? (Notion rows are not affected.)')) {
+      albums = [];
+      clearForm();
+      persist();
+      renderRanking();
+    }
+  });
+
+  $('exportBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(albums, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'album-ranking.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  $('importBtn').addEventListener('click', () => $('importFile').click());
+
+  $('importFile').addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        // A full backup (made before "Import all from Notion") restores all three lists.
+        if (data && Array.isArray(data.albums)) {
+          if (!confirm('This is a full backup: replace albums, EPs/compilations and other songs with it?')) return;
+          albums = data.albums;
+          others = Array.isArray(data.others) ? data.others : [];
+          extras = Array.isArray(data.extras) ? data.extras : [];
+          if (data.artistPhotos && typeof data.artistPhotos === 'object') { artistPhotos = data.artistPhotos; persistPhotos(); renderPhotos(); }
+          if (data.artistPages && typeof data.artistPages === 'object') { artistPages = data.artistPages; persistPages(); renderPhotos(); }
+          saveAll();
+          return;
+        }
+        if (!Array.isArray(data)) throw new Error('bad format');
+        albums = data;
+        persist();
+        renderRanking();
+      } catch (err) {
+        alert('That file could not be read as a ranking export.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  /* ─────────── artist photos ─────────── */
+  // { "Artist": { url, guess } } in this browser. "guess" = filled in by "Find missing photos",
+  // still to be checked. Published as { "Artist": url }; the ranking page falls back to album covers.
+  const PHOTOS_KEY = 'artistPhotos';
+  let artistPhotos = {};
+  try { artistPhotos = JSON.parse(localStorage.getItem(PHOTOS_KEY)) || {}; } catch (e) {}
+  function persistPhotos() {
+    try { localStorage.setItem(PHOTOS_KEY, JSON.stringify(artistPhotos)); } catch (e) {}
+  }
+  // { "Artist": "https://…" }: the artist's own Notion page, set by hand ("Page" button).
+  const PAGES_KEY = 'artistPages';
+  let artistPages = {};
+  try { artistPages = JSON.parse(localStorage.getItem(PAGES_KEY)) || {}; } catch (e) {}
+  function persistPages() {
+    try { localStorage.setItem(PAGES_KEY, JSON.stringify(artistPages)); } catch (e) {}
+  }
+  function publishedPhotos() {
+    const out = {};
+    for (const [a, p] of Object.entries(artistPhotos)) if (p && p.url) out[a] = p.url;
+    return out;
+  }
+  // Same names as the ranking page's artist rows (trimmed "artist").
+  function allArtists() {
+    const set = new Set();
+    albums.forEach(a => set.add((a.artist || String(a.name || '').split(' - ')[0]).trim()));
+    others.concat(extras).forEach(x => set.add(String(x.artist || '').trim()));
+    set.delete('');
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }
+
+  let photoPicker = null; // { artist, state: 'loading' | 'ready' | 'error', options, error }
+
+  function photoPickerHtml(p) {
+    let opts;
+    if (photoPicker.state === 'loading') opts = '<p class="status busy">Looking for photos…</p>';
+    else if (photoPicker.state === 'error') opts = '<p class="status err">✗ ' + esc(photoPicker.error) + '</p>';
+    else if (!photoPicker.options.length) opts = '<p class="muted small">No photos found. Paste an image link below.</p>';
+    else opts = '<div class="cover-grid">' + photoPicker.options.map(o =>
+      '<button type="button" class="cover-opt' + (p && o.url === p.url ? ' current' : '') + '" data-photopick="' + esc(o.url) + '">' +
+        '<img src="' + esc(o.url) + '" alt="" loading="lazy"><span class="t">' + esc(o.title) + '</span>' +
+        '<span class="muted">' + esc(o.detail) + '</span></button>').join('') + '</div>';
+    return '<div class="cover-picker">' + opts +
+      '<div class="tokenbar" style="margin-top:10px">' +
+        '<input type="text" class="photo-url" placeholder="Or paste a link (https://… or /artist-photo/…)" autocomplete="off">' +
+        '<button type="button" class="tiny" data-photouse>Use link</button></div>' +
+      '<div class="item-actions">' +
+        (p ? '<button type="button" class="tiny" data-photoremove>Remove photo</button>' : '') +
+        '<button type="button" class="tiny ghost" data-photoclose>Close</button></div></div>';
+  }
+
+  function renderPhotos() {
+    const list = allArtists();
+    const missing = list.filter(a => !artistPhotos[a]).length;
+    const guesses = list.filter(a => artistPhotos[a] && artistPhotos[a].guess).length;
+    $('photoList').innerHTML = list.map(a => {
+      const p = artistPhotos[a];
+      const open = photoPicker && photoPicker.artist === a;
+      return '<div data-artist="' + esc(a) + '"><div class="photo-row">' +
+        (p ? '<img class="ph" src="' + esc(p.url) + '" alt="" loading="lazy">' : '<span class="ph"></span>') +
+        '<span class="nm">' + esc(a) + (p && p.guess ? ' <span class="muted small">· guess, check it</span>' : '') +
+          (!p ? ' <span class="muted small">· album cover</span>' : '') + '</span>' +
+        (p && p.guess ? '<button type="button" class="tiny" data-photook>Looks right</button>' : '') +
+        '<button type="button" class="tiny' + (artistPages[a] ? ' primary' : '') + '" data-pagelink title="' +
+          esc(artistPages[a] || 'Link this artist’s Notion page') + '">' + (artistPages[a] ? '✓ Page' : 'Page') + '</button>' +
+        '<button type="button" class="tiny" data-photochange>' + (open ? 'Close' : 'Change photo') + '</button>' +
+      '</div>' + (open ? photoPickerHtml(p) : '') + '</div>';
+    }).join('') || '<p class="muted small">No artists yet.</p>';
+    if (!$('findPhotosBtn').disabled) {
+      $('photoStatus').textContent = list.length + ' artists · ' + missing + ' without a photo' + (guesses ? ' · ' + guesses + ' guesses to check' : '');
+      $('photoStatus').className = 'status';
+    }
+  }
+
+  function setPhoto(artist, url, guess) {
+    if (url) artistPhotos[artist] = { url, guess: !!guess };
+    else delete artistPhotos[artist];
+    persistPhotos();
+  }
+
+  async function photoOptions(artist) {
+    const res = await fetch(PROXY_URL + '/artist-photo-options?artist=' + encodeURIComponent(artist));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    return data.options || [];
+  }
+
+  async function openPhotoPicker(artist) {
+    photoPicker = { artist, state: 'loading', options: [] };
+    renderPhotos();
+    try {
+      const options = await photoOptions(artist);
+      if (photoPicker && photoPicker.artist === artist) Object.assign(photoPicker, { state: 'ready', options });
+    } catch (err) {
+      if (photoPicker && photoPicker.artist === artist) Object.assign(photoPicker, { state: 'error', error: err.message || String(err) });
+    }
+    renderPhotos();
+  }
+
+  $('photoList').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    const row = btn && btn.closest('[data-artist]');
+    if (!row) return;
+    const artist = row.dataset.artist;
+    if ('photochange' in btn.dataset) {
+      if (photoPicker && photoPicker.artist === artist) { photoPicker = null; renderPhotos(); }
+      else openPhotoPicker(artist);
+      return;
+    }
+    if ('pagelink' in btn.dataset) {
+      const v = prompt('Notion page link for ' + artist + ' (leave empty to remove):', artistPages[artist] || '');
+      if (v === null) return;
+      const url = v.trim();
+      if (url && !/^https?:\/\/\S+$/i.test(url)) { alert('Paste a full link, starting with https://'); return; }
+      if (url) artistPages[artist] = url; else delete artistPages[artist];
+      persistPages();
+    }
+    else if ('photook' in btn.dataset) setPhoto(artist, artistPhotos[artist].url, false);
+    else if (btn.dataset.photopick) { setPhoto(artist, btn.dataset.photopick, false); photoPicker = null; }
+    else if ('photouse' in btn.dataset) {
+      let url = row.querySelector('.photo-url').value.trim();
+      // Your own photos (lyrics/<Artist>/artist.jpg) are served by the worker at /artist-photo/<key>.
+      if (/^\/artist-photo\/\S+$/.test(url)) url = PROXY_URL + url;
+      if (!/^https?:\/\/\S+$/i.test(url)) { alert('Paste a full image link (https://…) or /artist-photo/<key>.'); return; }
+      setPhoto(artist, url, false);
+      photoPicker = null;
+    } else if ('photoremove' in btn.dataset) { setPhoto(artist, null); photoPicker = null; }
+    else if ('photoclose' in btn.dataset) photoPicker = null;
+    renderPhotos();
+  });
+
+  // Fills every artist without a photo with Deezer's top match, marked as a guess to check.
+  $('findPhotosBtn').addEventListener('click', async () => {
+    const todo = allArtists().filter(a => !artistPhotos[a]);
+    if (!todo.length) { $('photoStatus').textContent = 'Every artist already has a photo.'; return; }
+    const btn = $('findPhotosBtn');
+    btn.disabled = true;
+    let found = 0;
+    for (let i = 0; i < todo.length; i++) {
+      $('photoStatus').textContent = 'Looking… ' + (i + 1) + '/' + todo.length;
+      $('photoStatus').className = 'status busy';
+      try {
+        const [best] = await photoOptions(todo[i]);
+        if (best && !artistPhotos[todo[i]]) { setPhoto(todo[i], best.url, true); found++; }
+      } catch (e) {}
+    }
+    btn.disabled = false;
+    renderPhotos();
+    $('photoStatus').textContent = '✓ Found ' + found + ' of ' + todo.length + '. Check the ones marked "guess", then Publish.';
+    $('photoStatus').className = 'status ok';
+  });
+
+  /* ─────────── init ─────────── */
+
+  loadSecret();
+  loadToken();
+  load();
+  loadOthers();
+  loadExtras();
+  renderSongs();
+  renderRanking();
+  renderOthersRanking();
+  renderExtrasList();
+  updateWeighted();
+  updateOthersWeighted();
+  updateNamePreview();
+  updatePills();
+  showTab(recall('calc.tab') || 'albums');
+  showMode(recall('calc.mode') || 'album');
+  listsBox.open = recall('calc.listsOpen') === '1';
+
+})();
+</script>
+</body>
+</html>
